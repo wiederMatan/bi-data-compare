@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import comparisons, connections, history, scheduler
+from src.api.routes import comparisons, connections, history, notifications, scheduler
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -49,6 +49,11 @@ def create_app() -> FastAPI:
         scheduler.router,
         prefix="/api/v1/scheduler",
         tags=["scheduler"],
+    )
+    app.include_router(
+        notifications.router,
+        prefix="/api/v1/notifications",
+        tags=["notifications"],
     )
 
     @app.get("/api/health", tags=["health"])
