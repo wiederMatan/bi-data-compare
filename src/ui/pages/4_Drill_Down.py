@@ -159,7 +159,12 @@ def render() -> None:
                     st.subheader("🔍 Row-by-Row Value Differences")
 
                     key_col = compare_cols[0] if compare_cols else None
-                    if key_col and len(compare_cols) > 1:
+
+                    if len(compare_cols) < 2:
+                        st.info("Select at least 2 columns to enable row-by-row comparison. The first column is used as the key to match rows.")
+                    elif key_col:
+                        st.caption(f"Using **{key_col}** as the key column to match rows between source and target.")
+
                         df_merged = pd.merge(
                             df_source[compare_cols],
                             df_target[compare_cols],
@@ -213,7 +218,11 @@ def render() -> None:
                             else:
                                 st.success("✅ No value differences in matching rows")
                         else:
-                            st.info("No matching keys between source and target")
+                            st.markdown(render_empty_state(
+                                "🔗",
+                                "No Matching Keys",
+                                f"No rows with matching '{key_col}' values found between source and target. The rows exist only on one side."
+                            ), unsafe_allow_html=True)
 
             # Don't disconnect - keep connections cached
 
