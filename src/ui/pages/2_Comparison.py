@@ -26,7 +26,7 @@ from src.data.models import ComparisonMode
 from src.data.repositories import MetadataRepository
 from src.services.comparison import ComparisonService
 from src.utils.formatters import format_duration, format_number
-from src.utils.validators import validate_sql_identifier
+from src.utils.validators import validate_sql_identifier, validate_date_value
 
 logger = get_logger(__name__)
 
@@ -201,17 +201,21 @@ def render() -> None:
 
             if is_incremental:
                 try:
-                    # Get date columns from the fact table
+                    # Validate identifiers to prevent SQL injection
+                    validate_sql_identifier(schema_name, "schema_name")
+                    validate_sql_identifier(fact_table, "table_name")
+
+                    # Get date columns from the fact table using parameterized query
                     source_conn = get_cached_connection(source_conn_info)
-                    date_columns_query = f"""
+                    date_columns_query = """
                         SELECT COLUMN_NAME
                         FROM INFORMATION_SCHEMA.COLUMNS
-                        WHERE TABLE_SCHEMA = '{schema_name}'
-                        AND TABLE_NAME = '{fact_table}'
+                        WHERE TABLE_SCHEMA = ?
+                        AND TABLE_NAME = ?
                         AND DATA_TYPE IN ('date', 'datetime', 'datetime2', 'smalldatetime')
                         ORDER BY COLUMN_NAME
                     """
-                    date_cols_result = source_conn.execute_query(date_columns_query)
+                    date_cols_result = source_conn.execute_query(date_columns_query, (schema_name, fact_table))
                     date_columns = [row['COLUMN_NAME'] for row in date_cols_result]
 
                     if date_columns:
@@ -612,14 +616,15 @@ def display_result_summary(result, source_conn=None, target_conn=None) -> None:
                     min_max_date = inc_config.get("min_max_date")
 
                     if date_col and min_max_date:
-                        # Validate column name to prevent SQL injection
+                        # Validate column name and date value to prevent SQL injection
                         try:
                             validate_sql_identifier(date_col, "date_column")
+                            validate_date_value(str(min_max_date), "min_max_date")
                             # Build safe query with validated identifiers
                             date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
                             st.info(f"📅 Filtering BOTH source and target: `{date_col} <= '{min_max_date}'`")
                         except Exception as e:
-                            st.error(f"Invalid date column name: {e}")
+                            st.error(f"Invalid date column name or date value: {e}")
                             date_filter = ""
 
                 # Validate schema and table names
