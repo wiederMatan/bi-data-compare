@@ -23,7 +23,7 @@ from src.core.logging import get_logger
 from src.services.export import ExportService
 from src.services.sync_script import SyncScriptGenerator
 from src.utils.formatters import format_number, format_percentage
-from src.ui.styles import apply_professional_style
+from src.ui.styles import apply_professional_style, render_empty_state, render_status_badge
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -34,12 +34,16 @@ apply_professional_style()
 
 def render() -> None:
     """Render the results page."""
-    st.title("📈 Comparison Results")
+    st.title("Comparison Results")
 
     results = st.session_state.get("comparison_results", [])
 
     if not results:
-        st.warning("No comparison results available. Please run a comparison first.")
+        st.markdown(render_empty_state(
+            "📊",
+            "No Results Available",
+            "Run a comparison from the Comparison page to see results here"
+        ), unsafe_allow_html=True)
         return
 
     # Summary section

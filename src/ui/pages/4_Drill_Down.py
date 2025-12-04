@@ -12,7 +12,7 @@ if project_root not in sys.path:
 from src.core.logging import get_logger
 from src.data.database import get_cached_connection
 from src.utils.validators import validate_sql_identifier, validate_date_value
-from src.ui.styles import apply_professional_style
+from src.ui.styles import apply_professional_style, render_empty_state
 
 logger = get_logger(__name__)
 
@@ -22,14 +22,17 @@ apply_professional_style()
 
 def render() -> None:
     """Render the drill-down detail page."""
-    st.title("🔎 Drill-Down: Data Comparison")
+    st.title("Drill-Down Analysis")
 
     # Get drill-down data from session state
     drill_data = st.session_state.get("drill_down_data")
 
     if not drill_data:
-        st.warning("No drill-down data available. Please run a comparison first and click on a table to drill down.")
-        st.info("Go to **Comparison** page in the sidebar, run a comparison, and click '🔎 Open Drill-Down Details' on a table with differences.")
+        st.markdown(render_empty_state(
+            "🔍",
+            "No Table Selected",
+            "Run a comparison and click 'View Data Differences' on a table to analyze it here"
+        ), unsafe_allow_html=True)
         return
 
     table_name = drill_data.get("table_name", "Unknown")

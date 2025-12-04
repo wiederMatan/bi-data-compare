@@ -24,158 +24,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Professional styling
-st.markdown("""
-<style>
-    /* Main container styling */
-    .main .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        max-width: 1200px;
-    }
-
-    /* Header styling */
-    h1 {
-        color: #1e3a5f;
-        font-weight: 700;
-        padding-bottom: 0.5rem;
-        border-bottom: 3px solid #3498db;
-        margin-bottom: 1.5rem;
-    }
-
-    h2, h3 {
-        color: #2c3e50;
-        font-weight: 600;
-    }
-
-    /* Card-like containers */
-    .stExpander {
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    /* Metric styling */
-    [data-testid="stMetricValue"] {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #1e3a5f;
-    }
-
-    [data-testid="stMetricLabel"] {
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: #5a6c7d;
-    }
-
-    /* Button styling */
-    .stButton > button {
-        border-radius: 6px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-
-    .stButton > button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-    }
-
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1e3a5f 0%, #2c5282 100%);
-    }
-
-    [data-testid="stSidebar"] .stMarkdown,
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] label {
-        color: #ffffff !important;
-    }
-
-    [data-testid="stSidebar"] h1,
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3 {
-        color: #ffffff !important;
-    }
-
-    /* Sidebar navigation links */
-    [data-testid="stSidebarNav"] a span {
-        color: #ffffff !important;
-    }
-
-    [data-testid="stSidebarNav"] a:hover span {
-        color: #3498db !important;
-    }
-
-    /* Sidebar close button */
-    [data-testid="stSidebar"] button svg {
-        color: #ffffff !important;
-    }
-
-    /* Success/Error message styling */
-    .stSuccess {
-        background-color: #d4edda;
-        border-left: 4px solid #28a745;
-        border-radius: 4px;
-    }
-
-    .stError {
-        background-color: #f8d7da;
-        border-left: 4px solid #dc3545;
-        border-radius: 4px;
-    }
-
-    .stWarning {
-        background-color: #fff3cd;
-        border-left: 4px solid #ffc107;
-        border-radius: 4px;
-    }
-
-    .stInfo {
-        background-color: #d1ecf1;
-        border-left: 4px solid #17a2b8;
-        border-radius: 4px;
-    }
-
-    /* DataFrame styling */
-    .stDataFrame {
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-    }
-
-    /* Input field styling */
-    .stTextInput > div > div > input,
-    .stSelectbox > div > div > div {
-        border-radius: 6px;
-    }
-
-    /* Divider styling */
-    hr {
-        border: none;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
-        margin: 2rem 0;
-    }
-
-    /* Footer */
-    .footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: #f8f9fa;
-        padding: 0.5rem;
-        text-align: center;
-        font-size: 0.8rem;
-        color: #6c757d;
-        border-top: 1px solid #e0e0e0;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Apply professional styling
+from src.ui.styles import apply_professional_style, render_status_badge, render_empty_state
+apply_professional_style()
 
 # Load all cached state on app startup
 if "app_cache_loaded" not in st.session_state:
@@ -234,133 +85,162 @@ if "app_cache_loaded" not in st.session_state:
 
     st.session_state.app_cache_loaded = True
 
-# Hero section
+# Hero section - simplified
 st.markdown("""
-<div style="text-align: center; padding: 2rem 0;">
-    <h1 style="border: none; font-size: 2.5rem; margin-bottom: 0.5rem;">SQL Data Compare</h1>
-    <p style="font-size: 1.2rem; color: #5a6c7d; margin-bottom: 2rem;">
-        Enterprise-grade table comparison for SQL Server databases
+<div style="text-align: center; padding: 1.5rem 0 2rem 0;">
+    <h1 style="border: none; font-size: 2.25rem; margin-bottom: 0.5rem; color: #1e3a5f;">
+        SQL Data Compare
+    </h1>
+    <p style="font-size: 1.1rem; color: #64748b; margin-bottom: 0;">
+        Compare tables between SQL Server databases
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-# Feature cards
+# Quick actions - streamlined
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("""
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; border-radius: 12px; color: white; height: 180px;">
-        <h3 style="color: white; border: none; margin-bottom: 0.5rem;">Schema Comparison</h3>
-        <p style="font-size: 0.95rem; opacity: 0.9;">
-            Detect column differences, type mismatches, and structural changes between databases
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04); height: 140px;">
+        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
+            <span style="font-size: 1.5rem; margin-right: 0.5rem;">🔗</span>
+            <h3 style="margin: 0; color: #1e3a5f; font-size: 1.1rem;">Connect</h3>
+        </div>
+        <p style="font-size: 0.9rem; color: #64748b; margin: 0; line-height: 1.5;">
+            Configure source and target database connections
         </p>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
     st.markdown("""
-    <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 1.5rem; border-radius: 12px; color: white; height: 180px;">
-        <h3 style="color: white; border: none; margin-bottom: 0.5rem;">Data Validation</h3>
-        <p style="font-size: 0.95rem; opacity: 0.9;">
-            Compare row counts, checksums, and identify data discrepancies with precision
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04); height: 140px;">
+        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
+            <span style="font-size: 1.5rem; margin-right: 0.5rem;">📊</span>
+            <h3 style="margin: 0; color: #1e3a5f; font-size: 1.1rem;">Compare</h3>
+        </div>
+        <p style="font-size: 0.9rem; color: #64748b; margin: 0; line-height: 1.5;">
+            Select tables and run schema & data comparisons
         </p>
     </div>
     """, unsafe_allow_html=True)
 
 with col3:
     st.markdown("""
-    <div style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); padding: 1.5rem; border-radius: 12px; color: white; height: 180px;">
-        <h3 style="color: white; border: none; margin-bottom: 0.5rem;">Drill-Down Analysis</h3>
-        <p style="font-size: 0.95rem; opacity: 0.9;">
-            Investigate differences with EXCEPT queries and row-by-row comparisons
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04); height: 140px;">
+        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
+            <span style="font-size: 1.5rem; margin-right: 0.5rem;">🔍</span>
+            <h3 style="margin: 0; color: #1e3a5f; font-size: 1.1rem;">Analyze</h3>
+        </div>
+        <p style="font-size: 0.9rem; color: #64748b; margin: 0; line-height: 1.5;">
+            Drill down into differences and export reports
         </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Quick start section
-st.markdown("### Quick Start")
-
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    st.markdown("""
-    <div style="text-align: center; padding: 1rem;">
-        <div style="font-size: 2rem; margin-bottom: 0.5rem;">1</div>
-        <strong>Connect</strong>
-        <p style="font-size: 0.85rem; color: #6c757d;">Configure source & target databases</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown("""
-    <div style="text-align: center; padding: 1rem;">
-        <div style="font-size: 2rem; margin-bottom: 0.5rem;">2</div>
-        <strong>Select</strong>
-        <p style="font-size: 0.85rem; color: #6c757d;">Choose tables to compare</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown("""
-    <div style="text-align: center; padding: 1rem;">
-        <div style="font-size: 2rem; margin-bottom: 0.5rem;">3</div>
-        <strong>Compare</strong>
-        <p style="font-size: 0.85rem; color: #6c757d;">Run comparison analysis</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col4:
-    st.markdown("""
-    <div style="text-align: center; padding: 1rem;">
-        <div style="font-size: 2rem; margin-bottom: 0.5rem;">4</div>
-        <strong>Analyze</strong>
-        <p style="font-size: 0.85rem; color: #6c757d;">Review results & drill down</p>
     </div>
     """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# Status section
+# Status dashboard - cleaner layout
+st.markdown("### Dashboard")
+
+source_connected = st.session_state.get("source_connected", False)
+target_connected = st.session_state.get("target_connected", False)
+results = st.session_state.get("comparison_results", [])
+
+# Connection status with badges
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("### Connection Status")
-    source_connected = st.session_state.get("source_connected", False)
-    target_connected = st.session_state.get("target_connected", False)
+    st.markdown("**Connection Status**")
 
-    if source_connected:
-        source_conn = st.session_state.get("source_connection")
-        st.success(f"Source: {source_conn.server}/{source_conn.database}" if source_conn else "Source: Connected")
-    else:
-        st.warning("Source: Not connected")
+    source_conn = st.session_state.get("source_connection")
+    target_conn = st.session_state.get("target_connection")
 
-    if target_connected:
-        target_conn = st.session_state.get("target_connection")
-        st.success(f"Target: {target_conn.server}/{target_conn.database}" if target_conn else "Target: Connected")
+    if source_connected and source_conn:
+        st.markdown(f'''
+        <div style="display: flex; align-items: center; padding: 0.75rem; background: #f0fdf4;
+                    border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid #bbf7d0;">
+            <span style="background: #22c55e; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.75rem;"></span>
+            <span style="color: #166534; font-weight: 500;">Source:</span>
+            <span style="color: #166534; margin-left: 0.5rem;">{source_conn.server}/{source_conn.database}</span>
+        </div>
+        ''', unsafe_allow_html=True)
     else:
-        st.warning("Target: Not connected")
+        st.markdown('''
+        <div style="display: flex; align-items: center; padding: 0.75rem; background: #fefce8;
+                    border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid #fef08a;">
+            <span style="background: #eab308; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.75rem;"></span>
+            <span style="color: #854d0e; font-weight: 500;">Source:</span>
+            <span style="color: #854d0e; margin-left: 0.5rem;">Not connected</span>
+        </div>
+        ''', unsafe_allow_html=True)
+
+    if target_connected and target_conn:
+        st.markdown(f'''
+        <div style="display: flex; align-items: center; padding: 0.75rem; background: #f0fdf4;
+                    border-radius: 8px; border: 1px solid #bbf7d0;">
+            <span style="background: #22c55e; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.75rem;"></span>
+            <span style="color: #166534; font-weight: 500;">Target:</span>
+            <span style="color: #166534; margin-left: 0.5rem;">{target_conn.server}/{target_conn.database}</span>
+        </div>
+        ''', unsafe_allow_html=True)
+    else:
+        st.markdown('''
+        <div style="display: flex; align-items: center; padding: 0.75rem; background: #fefce8;
+                    border-radius: 8px; border: 1px solid #fef08a;">
+            <span style="background: #eab308; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.75rem;"></span>
+            <span style="color: #854d0e; font-weight: 500;">Target:</span>
+            <span style="color: #854d0e; margin-left: 0.5rem;">Not connected</span>
+        </div>
+        ''', unsafe_allow_html=True)
 
 with col2:
-    st.markdown("### Recent Activity")
-    results = st.session_state.get("comparison_results", [])
+    st.markdown("**Last Comparison**")
+
     if results:
         matching = sum(1 for r in results if r.is_match())
         different = sum(1 for r in results if r.status == "completed" and not r.is_match())
         failed = sum(1 for r in results if r.status == "failed")
-        st.metric("Last Run", f"{len(results)} tables")
-        cols = st.columns(3)
-        cols[0].metric("Matching", matching)
-        cols[1].metric("Different", different)
-        cols[2].metric("Failed", failed)
+
+        st.markdown(f'''
+        <div style="display: flex; gap: 1rem;">
+            <div style="flex: 1; background: white; padding: 1rem; border-radius: 8px;
+                        border: 1px solid #e2e8f0; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #1e3a5f;">{len(results)}</div>
+                <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Tables</div>
+            </div>
+            <div style="flex: 1; background: #f0fdf4; padding: 1rem; border-radius: 8px;
+                        border: 1px solid #bbf7d0; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #166534;">{matching}</div>
+                <div style="font-size: 0.75rem; color: #166534; text-transform: uppercase; letter-spacing: 0.05em;">Match</div>
+            </div>
+            <div style="flex: 1; background: #fefce8; padding: 1rem; border-radius: 8px;
+                        border: 1px solid #fef08a; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #854d0e;">{different}</div>
+                <div style="font-size: 0.75rem; color: #854d0e; text-transform: uppercase; letter-spacing: 0.05em;">Different</div>
+            </div>
+            <div style="flex: 1; background: #fef2f2; padding: 1rem; border-radius: 8px;
+                        border: 1px solid #fecaca; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #991b1b;">{failed}</div>
+                <div style="font-size: 0.75rem; color: #991b1b; text-transform: uppercase; letter-spacing: 0.05em;">Failed</div>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
     else:
-        st.info("No comparison results yet. Run a comparison to see results here.")
+        st.markdown(render_empty_state(
+            "📋",
+            "No comparisons yet",
+            "Run a comparison to see results here"
+        ), unsafe_allow_html=True)
 
 # Footer
 st.markdown("""
-<div style="text-align: center; padding: 2rem 0; color: #6c757d; font-size: 0.85rem;">
-    <p>SQL Data Compare v1.0 | Built with Streamlit</p>
+<div style="text-align: center; padding: 2rem 0 1rem 0; color: #94a3b8; font-size: 0.8rem;">
+    SQL Data Compare v1.0
 </div>
 """, unsafe_allow_html=True)
 
