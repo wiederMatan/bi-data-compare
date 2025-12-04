@@ -185,7 +185,7 @@ def render() -> None:
         selected_restricted = [t for t in selected_tables if is_restricted(t)]
         if len(selected_restricted) > 0 and len(selected_tables) > 1:
             st.error(f"⚠️ When selecting a Fact/Link table, you can only select ONE table. You selected: {', '.join(selected_tables)}")
-            st.info("Please select only one fact or link table mother fucker")
+            st.info("💡 Tip: Fact and Link tables must be compared individually due to their size and complexity.")
             selected_tables = []  # Clear selection to prevent comparison
 
         st.caption(f"Selected {len(selected_tables)} tables ({len(selected_restricted)} fact/link, {len(selected_tables) - len(selected_restricted)} other)")
