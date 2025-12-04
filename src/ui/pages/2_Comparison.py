@@ -391,11 +391,11 @@ def load_tables(source_conn_info, target_conn_info, schema_name: str) -> None:
                         st.write(f"• {table}")
 
                 if source_only:
-                    with st.expander(f"⚠️ {len(source_only)} tables exist only in source database", expanded=False):
+                    with st.expander(f"⚠️ {len(source_only)} tables exist only in source database", expanded=True):
                         for table in source_only:
                             st.write(f"• {table}")
                 if target_only:
-                    with st.expander(f"⚠️ {len(target_only)} tables exist only in target database", expanded=False):
+                    with st.expander(f"⚠️ {len(target_only)} tables exist only in target database", expanded=True):
                         for table in target_only:
                             st.write(f"• {table}")
             else:
@@ -572,8 +572,29 @@ def display_result_summary(result, source_conn=None, target_conn=None) -> None:
             table_name = parts[-1]
 
             try:
+                # Check if incremental comparison is enabled and get date filter
+                date_filter = ""
+                inc_config = st.session_state.get("incremental_config")
+                if inc_config and inc_config.get("table") == table_name:
+                    date_col = inc_config.get("date_column")
+                    if date_col:
+                        # Get max dates from both databases
+                        source_max_q = f"SELECT MAX([{date_col}]) as max_val FROM [{schema_name}].[{table_name}]"
+                        target_max_q = f"SELECT MAX([{date_col}]) as max_val FROM [{schema_name}].[{table_name}]"
+                        source_max_result = source_conn.execute_query(source_max_q)
+                        target_max_result = target_conn.execute_query(target_max_q)
+
+                        source_max = source_max_result[0]['max_val'] if source_max_result and source_max_result[0]['max_val'] else None
+                        target_max = target_max_result[0]['max_val'] if target_max_result and target_max_result[0]['max_val'] else None
+
+                        if source_max and target_max and str(source_max) != str(target_max):
+                            # Use min of the two max dates
+                            min_max_date = min(source_max, target_max)
+                            date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
+                            st.info(f"📅 Comparing only rows where {date_col} <= {min_max_date} (min of max dates)")
+
                 # Fetch all data from both tables (limit to reasonable size)
-                query = f"SELECT TOP 1000 * FROM [{schema_name}].[{table_name}]"
+                query = f"SELECT TOP 1000 * FROM [{schema_name}].[{table_name}]{date_filter}"
                 source_rows = source_conn.execute_query(query)
                 target_rows = target_conn.execute_query(query)
 
