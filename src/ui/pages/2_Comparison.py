@@ -26,6 +26,7 @@ from src.data.models import ComparisonMode
 from src.data.repositories import MetadataRepository
 from src.services.comparison import ComparisonService
 from src.utils.formatters import format_duration, format_number
+from src.utils.validators import validate_sql_identifier
 
 logger = get_logger(__name__)
 
@@ -611,8 +612,19 @@ def display_result_summary(result, source_conn=None, target_conn=None) -> None:
                     min_max_date = inc_config.get("min_max_date")
 
                     if date_col and min_max_date:
-                        date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
-                        st.info(f"📅 Filtering BOTH source and target: `{date_col} <= '{min_max_date}'`")
+                        # Validate column name to prevent SQL injection
+                        try:
+                            validate_sql_identifier(date_col, "date_column")
+                            # Build safe query with validated identifiers
+                            date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
+                            st.info(f"📅 Filtering BOTH source and target: `{date_col} <= '{min_max_date}'`")
+                        except Exception as e:
+                            st.error(f"Invalid date column name: {e}")
+                            date_filter = ""
+
+                # Validate schema and table names
+                validate_sql_identifier(schema_name, "schema_name")
+                validate_sql_identifier(table_name, "table_name")
 
                 # Fetch data from both tables with same filter (limit to reasonable size)
                 query = f"SELECT TOP 1000 * FROM [{schema_name}].[{table_name}]{date_filter}"

@@ -11,6 +11,7 @@ if project_root not in sys.path:
 
 from src.core.logging import get_logger
 from src.data.database import get_cached_connection
+from src.utils.validators import validate_sql_identifier
 
 logger = get_logger(__name__)
 
@@ -52,6 +53,14 @@ def render() -> None:
             source_conn = get_cached_connection(source_conn_info)
             target_conn = get_cached_connection(target_conn_info)
 
+            # Validate schema and table names to prevent SQL injection
+            try:
+                validate_sql_identifier(schema_name, "schema_name")
+                validate_sql_identifier(table_name, "table_name")
+            except Exception as e:
+                st.error(f"Invalid identifier: {e}")
+                return
+
             # Check if incremental comparison filter should be applied
             date_filter = ""
             inc_config = st.session_state.get("incremental_config")
@@ -60,8 +69,14 @@ def render() -> None:
                 min_max_date = inc_config.get("min_max_date")
 
                 if date_col and min_max_date:
-                    date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
-                    st.info(f"📅 **Incremental filter active:** Comparing only rows where `{date_col} <= '{min_max_date}'` (applied to BOTH source and target)")
+                    # Validate column name to prevent SQL injection
+                    try:
+                        validate_sql_identifier(date_col, "date_column")
+                        date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
+                        st.info(f"📅 **Incremental filter active:** Comparing only rows where `{date_col} <= '{min_max_date}'` (applied to BOTH source and target)")
+                    except Exception as e:
+                        st.error(f"Invalid date column name: {e}")
+                        date_filter = ""
 
             # Fetch data with filter applied to both sides
             query = f"SELECT TOP 1000 * FROM [{schema_name}].[{table_name}]{date_filter}"

@@ -1,5 +1,6 @@
 """Database connection and management."""
 
+import threading
 from contextlib import contextmanager
 from typing import Any, Generator, Optional
 
@@ -14,8 +15,9 @@ from src.data.models import ConnectionInfo, AuthType
 
 logger = get_logger(__name__)
 
-# Global connection cache
+# Global connection cache with thread safety
 _connection_cache: dict[str, "DatabaseConnection"] = {}
+_cache_lock = threading.Lock()
 
 
 def get_cached_connection(connection_info: ConnectionInfo) -> "DatabaseConnection":
@@ -30,33 +32,35 @@ def get_cached_connection(connection_info: ConnectionInfo) -> "DatabaseConnectio
     """
     cache_key = f"{connection_info.server}_{connection_info.database}"
 
-    if cache_key in _connection_cache:
-        conn = _connection_cache[cache_key]
-        # Check if still connected
-        if conn._engine is not None:
-            try:
-                conn.test_connection()
-                return conn
-            except Exception:
-                # Connection lost, remove from cache
-                del _connection_cache[cache_key]
+    with _cache_lock:
+        if cache_key in _connection_cache:
+            conn = _connection_cache[cache_key]
+            # Check if still connected
+            if conn._engine is not None:
+                try:
+                    conn.test_connection()
+                    return conn
+                except Exception:
+                    # Connection lost, remove from cache
+                    del _connection_cache[cache_key]
 
-    # Create new connection
-    conn = DatabaseConnection(connection_info)
-    conn.connect()
-    _connection_cache[cache_key] = conn
-    return conn
+        # Create new connection
+        conn = DatabaseConnection(connection_info)
+        conn.connect()
+        _connection_cache[cache_key] = conn
+        return conn
 
 
 def clear_connection_cache() -> None:
     """Clear all cached connections."""
     global _connection_cache
-    for conn in _connection_cache.values():
-        try:
-            conn.disconnect()
-        except Exception:
-            pass
-    _connection_cache.clear()
+    with _cache_lock:
+        for conn in _connection_cache.values():
+            try:
+                conn.disconnect()
+            except Exception:
+                pass
+        _connection_cache.clear()
     logger.info("Connection cache cleared")
 
 

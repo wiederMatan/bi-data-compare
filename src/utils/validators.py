@@ -254,6 +254,100 @@ def validate_credentials(username: Optional[str], password: Optional[str], use_w
     return True
 
 
+def validate_sql_identifier(identifier: str, field_name: str = "identifier") -> bool:
+    """
+    Validate a SQL identifier (table, column, schema name) to prevent injection.
+
+    Args:
+        identifier: The identifier to validate
+        field_name: Name of the field for error messages
+
+    Returns:
+        True if valid
+
+    Raises:
+        ValidationError: If identifier is invalid or potentially dangerous
+    """
+    if not identifier:
+        raise ValidationError(
+            f"{field_name} cannot be empty",
+            field=field_name,
+        )
+
+    # Check length
+    if len(identifier) > 128:
+        raise ValidationError(
+            f"{field_name} cannot exceed 128 characters",
+            field=field_name,
+            value=identifier,
+        )
+
+    # SQL Server identifier rules - alphanumeric, underscore, @, #, $
+    # Must start with letter, underscore, @, or #
+    pattern = r"^[a-zA-Z_@#][a-zA-Z0-9_@#$]*$"
+    if not re.match(pattern, identifier):
+        raise ValidationError(
+            f"Invalid {field_name} format. Contains invalid characters.",
+            field=field_name,
+            value=identifier,
+        )
+
+    # Check for SQL injection keywords (extra safety)
+    dangerous_keywords = [
+        'DROP', 'DELETE', 'INSERT', 'UPDATE', 'EXEC', 'EXECUTE',
+        'UNION', 'SELECT', '--', ';', 'xp_', 'sp_'
+    ]
+    identifier_upper = identifier.upper()
+    for keyword in dangerous_keywords:
+        if keyword in identifier_upper:
+            raise ValidationError(
+                f"{field_name} contains potentially dangerous keyword: {keyword}",
+                field=field_name,
+                value=identifier,
+            )
+
+    return True
+
+
+def validate_date_value(date_value: str, field_name: str = "date") -> bool:
+    """
+    Validate a date value to prevent SQL injection.
+
+    Args:
+        date_value: The date string to validate
+        field_name: Name of the field for error messages
+
+    Returns:
+        True if valid
+
+    Raises:
+        ValidationError: If date format is invalid
+    """
+    if not date_value:
+        raise ValidationError(
+            f"{field_name} cannot be empty",
+            field=field_name,
+        )
+
+    # Allow common date formats: YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, etc.
+    # Also allow datetime objects converted to string
+    date_patterns = [
+        r"^\d{4}-\d{2}-\d{2}$",  # YYYY-MM-DD
+        r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$",  # YYYY-MM-DD HH:MM:SS
+        r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}",  # ISO format
+    ]
+
+    is_valid = any(re.match(pattern, str(date_value)) for pattern in date_patterns)
+    if not is_valid:
+        raise ValidationError(
+            f"Invalid {field_name} format. Expected YYYY-MM-DD or similar.",
+            field=field_name,
+            value=str(date_value),
+        )
+
+    return True
+
+
 def validate_chunk_size(chunk_size: int, min_size: int = 100, max_size: int = 1000000) -> bool:
     """
     Validate chunk size for data processing.
