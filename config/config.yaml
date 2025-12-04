@@ -1,0 +1,109 @@
+application:
+  name: "SQL Server Data Comparison"
+  version: "1.0.0"
+  environment: "development"
+
+database:
+  connection_timeout: 30
+  command_timeout: 300
+  pool_size: 5
+  max_overflow: 10
+  pool_recycle: 3600
+  echo: false
+
+comparison:
+  modes:
+    quick:
+      description: "Checksum-based comparison"
+      use_checksums: true
+      compare_data: false
+    standard:
+      description: "Full row-by-row comparison"
+      use_checksums: false
+      compare_data: true
+    deep:
+      description: "Complete schema, data, and index comparison"
+      use_checksums: false
+      compare_data: true
+      compare_indexes: true
+      compare_constraints: true
+
+  chunk_size: 10000
+  max_parallel_tables: 4
+  ignore_case: false
+  ignore_whitespace: false
+  date_format: "%Y-%m-%d %H:%M:%S"
+
+compression:
+  analyze_threshold: 1000  # Minimum rows to analyze
+  estimate_sample_percent: 10
+  supported_types:
+    - PAGE
+    - ROW
+    - COLUMNSTORE
+  recommendations:
+    page_min_size_mb: 10
+    row_min_size_mb: 5
+    columnstore_min_rows: 100000
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  date_format: "%Y-%m-%d %H:%M:%S"
+  file:
+    enabled: true
+    path: "logs/app.log"
+    max_bytes: 10485760  # 10MB
+    backup_count: 5
+  console:
+    enabled: true
+
+ui:
+  theme:
+    primary_color: "#0066CC"
+    background_color: "#FFFFFF"
+    secondary_background_color: "#F0F2F6"
+    text_color: "#262730"
+    font: "sans serif"
+
+  colors:
+    match: "#28A745"      # Green
+    schema_diff: "#FFC107"  # Yellow
+    data_diff: "#DC3545"    # Red
+    missing: "#6C757D"      # Gray
+    info: "#17A2B8"         # Cyan
+
+  page_config:
+    layout: "wide"
+    initial_sidebar_state: "expanded"
+
+  export:
+    formats:
+      - excel
+      - csv
+      - json
+      - html
+      - pdf
+    max_rows_preview: 1000
+
+security:
+  encrypt_credentials: true
+  use_parameterized_queries: true
+  session_timeout: 3600
+  max_login_attempts: 5
+
+performance:
+  cache_enabled: true
+  cache_ttl: 3600
+  lazy_loading: true
+  use_generators: true
+  connection_pooling: true
+
+localization:
+  default_language: "en"
+  supported_languages:
+    - en
+    - he
+  rtl_languages:
+    - he
+  encoding: "utf-8"

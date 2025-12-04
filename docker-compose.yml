@@ -1,0 +1,55 @@
+services:
+  qa:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver-qa
+    hostname: qa
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong@Passw0rd
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-qa-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong@Passw0rd" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  dev:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver-dev
+    hostname: dev
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong@Passw0rd
+    ports:
+      - "1434:1433"
+    volumes:
+      - sqlserver-dev-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong@Passw0rd" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  app:
+    build: .
+    container_name: data-compare-app
+    ports:
+      - "8503:8502"
+    env_file:
+      - .env.docker
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      qa:
+        condition: service_healthy
+      dev:
+        condition: service_healthy
+
+volumes:
+  sqlserver-qa-data:
+  sqlserver-dev-data:
