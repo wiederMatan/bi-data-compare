@@ -25,8 +25,10 @@ importlib.reload(src.data.database)
 from src.data.models import ComparisonMode
 from src.data.repositories import MetadataRepository
 from src.services.comparison import ComparisonService
+from src.services.persistence import get_persistence_service
 from src.utils.formatters import format_duration, format_number
 from src.utils.validators import validate_sql_identifier, validate_date_value
+import uuid
 
 logger = get_logger(__name__)
 
@@ -472,8 +474,22 @@ def run_comparison(
         # Create comparison service
         comparison_service = ComparisonService(source_conn, target_conn)
 
+        # Initialize persistence service and create run
+        persistence = get_persistence_service()
+        run_id = str(uuid.uuid4())[:8]  # Short unique ID
+        persistence.create_run(
+            run_id=run_id,
+            source_server=source_conn_info.server,
+            source_database=source_conn_info.database,
+            target_server=target_conn_info.server,
+            target_database=target_conn_info.database,
+            schema_name=schema_name,
+        )
+        st.session_state.current_run_id = run_id
+
         # Progress tracking
         st.subheader("Comparison Progress")
+        st.caption(f"Run ID: `{run_id}`")
         progress_bar = st.progress(0)
         status_text = st.empty()
         results_container = st.container()
@@ -481,6 +497,9 @@ def run_comparison(
         results = []
         completed = 0
         total = len(selected_tables)
+        matching_count = 0
+        different_count = 0
+        failed_count = 0
 
         # Run comparisons
         for result in comparison_service.compare_multiple_tables(
@@ -502,9 +521,29 @@ def run_comparison(
             # Store result
             results.append(result)
 
+            # Save to persistence
+            persistence.save_result(run_id, result)
+
+            # Track statistics
+            if result.status == "failed":
+                failed_count += 1
+            elif result.is_match():
+                matching_count += 1
+            else:
+                different_count += 1
+
             # Show live results
             with results_container:
                 display_result_summary(result, source_conn, target_conn)
+
+        # Complete the run in persistence
+        persistence.complete_run(
+            run_id=run_id,
+            total_tables=total,
+            matching_tables=matching_count,
+            different_tables=different_count,
+            failed_tables=failed_count,
+        )
 
         # Don't disconnect - keep connections cached
 
