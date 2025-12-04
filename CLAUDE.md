@@ -82,8 +82,8 @@ src/
 
 ### Docker Setup
 - `docker-compose.yml` - Defines app + 2 SQL Server containers (dev/qa)
-- App container: Port 8503
-- SQL Server dev: Port 1434
+- App container: Port 8503 (external) → 8502 (internal)
+- SQL Server dev: Port 1434 (external) → 1433 (internal)
 - SQL Server qa: Port 1433
 
 ## Prerequisites
