@@ -1,5 +1,7 @@
 """Table comparison service."""
 
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Callable, Generator, Optional
 
@@ -48,12 +50,14 @@ class ComparisonService:
         self.settings = get_settings()
         # Cache for column metadata to avoid duplicate queries
         self._column_cache: dict[str, list[ColumnInfo]] = {}
+        # Thread lock for cache access
+        self._cache_lock = threading.Lock()
 
     def _get_cached_columns(
         self, repo: MetadataRepository, schema: str, table: str, prefix: str
     ) -> list[ColumnInfo]:
         """
-        Get columns with caching to avoid duplicate queries.
+        Get columns with caching to avoid duplicate queries (thread-safe).
 
         Args:
             repo: Metadata repository (source or target)
@@ -65,16 +69,18 @@ class ComparisonService:
             List of column information
         """
         cache_key = f"{prefix}:{schema}.{table}"
-        if cache_key not in self._column_cache:
-            logger.debug(f"Cache MISS: fetching columns for {cache_key}")
-            self._column_cache[cache_key] = repo.get_table_columns(schema, table)
-        else:
-            logger.debug(f"Cache HIT: using cached columns for {cache_key}")
-        return self._column_cache[cache_key]
+        with self._cache_lock:
+            if cache_key not in self._column_cache:
+                logger.debug(f"Cache MISS: fetching columns for {cache_key}")
+                self._column_cache[cache_key] = repo.get_table_columns(schema, table)
+            else:
+                logger.debug(f"Cache HIT: using cached columns for {cache_key}")
+            return self._column_cache[cache_key]
 
     def clear_cache(self) -> None:
-        """Clear the column metadata cache."""
-        self._column_cache.clear()
+        """Clear the column metadata cache (thread-safe)."""
+        with self._cache_lock:
+            self._column_cache.clear()
 
     def compare_schemas(
         self,
@@ -546,21 +552,54 @@ class ComparisonService:
         table_names: list[str],
         mode: ComparisonMode = ComparisonMode.QUICK,
         max_workers: Optional[int] = None,
+        parallel: bool = True,
     ) -> Generator[ComparisonResult, None, None]:
         """
-        Compare multiple tables sequentially (one at a time).
+        Compare multiple tables with optional parallel execution.
 
         Args:
             source_schema: Source schema name
             target_schema: Target schema name
             table_names: List of table names to compare
             mode: Comparison mode
-            max_workers: Ignored - kept for API compatibility
+            max_workers: Maximum number of parallel workers (default from settings)
+            parallel: Whether to run comparisons in parallel (default True)
 
         Yields:
             Comparison results for each table
         """
-        # Run sequentially to avoid database overload
+        if max_workers is None:
+            max_workers = self.settings.comparison.max_parallel_tables
+
+        # Use parallel execution if enabled and more than one table
+        if parallel and len(table_names) > 1 and max_workers > 1:
+            yield from self._compare_tables_parallel(
+                source_schema, target_schema, table_names, mode, max_workers
+            )
+        else:
+            yield from self._compare_tables_sequential(
+                source_schema, target_schema, table_names, mode
+            )
+
+    def _compare_tables_sequential(
+        self,
+        source_schema: str,
+        target_schema: str,
+        table_names: list[str],
+        mode: ComparisonMode,
+    ) -> Generator[ComparisonResult, None, None]:
+        """
+        Compare tables sequentially (one at a time).
+
+        Args:
+            source_schema: Source schema name
+            target_schema: Target schema name
+            table_names: List of table names to compare
+            mode: Comparison mode
+
+        Yields:
+            Comparison results for each table
+        """
         for table_name in table_names:
             try:
                 result = self.compare_table(
@@ -575,7 +614,6 @@ class ComparisonService:
                 logger.error(
                     f"Failed to compare table {table_name}: {str(e)}"
                 )
-                # Yield failed result
                 yield ComparisonResult(
                     source_table=f"{source_schema}.{table_name}",
                     target_table=f"{target_schema}.{table_name}",
@@ -585,3 +623,73 @@ class ComparisonService:
                     status="failed",
                     error_message=str(e),
                 )
+
+    def _compare_tables_parallel(
+        self,
+        source_schema: str,
+        target_schema: str,
+        table_names: list[str],
+        mode: ComparisonMode,
+        max_workers: int,
+    ) -> Generator[ComparisonResult, None, None]:
+        """
+        Compare tables in parallel using ThreadPoolExecutor.
+
+        Args:
+            source_schema: Source schema name
+            target_schema: Target schema name
+            table_names: List of table names to compare
+            mode: Comparison mode
+            max_workers: Maximum number of parallel workers
+
+        Yields:
+            Comparison results for each table (in completion order)
+        """
+        logger.info(f"Starting parallel comparison of {len(table_names)} tables with {max_workers} workers")
+
+        def compare_single_table(table_name: str) -> ComparisonResult:
+            """Worker function to compare a single table."""
+            try:
+                return self.compare_table(
+                    source_schema,
+                    table_name,
+                    target_schema,
+                    table_name,
+                    mode,
+                )
+            except Exception as e:
+                logger.error(f"Failed to compare table {table_name}: {str(e)}")
+                return ComparisonResult(
+                    source_table=f"{source_schema}.{table_name}",
+                    target_table=f"{target_schema}.{table_name}",
+                    mode=mode,
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="failed",
+                    error_message=str(e),
+                )
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_table = {
+                executor.submit(compare_single_table, table_name): table_name
+                for table_name in table_names
+            }
+
+            # Yield results as they complete
+            for future in as_completed(future_to_table):
+                table_name = future_to_table[future]
+                try:
+                    result = future.result()
+                    yield result
+                except Exception as e:
+                    logger.error(f"Unexpected error comparing {table_name}: {str(e)}")
+                    yield ComparisonResult(
+                        source_table=f"{source_schema}.{table_name}",
+                        target_table=f"{target_schema}.{table_name}",
+                        mode=mode,
+                        started_at=datetime.now(),
+                        completed_at=datetime.now(),
+                        status="failed",
+                        error_message=str(e),
+                    )

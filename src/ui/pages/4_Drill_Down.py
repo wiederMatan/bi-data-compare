@@ -11,7 +11,7 @@ if project_root not in sys.path:
 
 from src.core.logging import get_logger
 from src.data.database import get_cached_connection
-from src.utils.validators import validate_sql_identifier
+from src.utils.validators import validate_sql_identifier, validate_date_value
 
 logger = get_logger(__name__)
 
@@ -69,13 +69,14 @@ def render() -> None:
                 min_max_date = inc_config.get("min_max_date")
 
                 if date_col and min_max_date:
-                    # Validate column name to prevent SQL injection
+                    # Validate column name and date value to prevent SQL injection
                     try:
                         validate_sql_identifier(date_col, "date_column")
+                        validate_date_value(str(min_max_date), "min_max_date")
                         date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
                         st.info(f"📅 **Incremental filter active:** Comparing only rows where `{date_col} <= '{min_max_date}'` (applied to BOTH source and target)")
                     except Exception as e:
-                        st.error(f"Invalid date column name: {e}")
+                        st.error(f"Invalid identifier or date value: {e}")
                         date_filter = ""
 
             # Fetch data with filter applied to both sides

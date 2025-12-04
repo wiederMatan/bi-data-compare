@@ -8,6 +8,9 @@ pydantic-settings==2.1.0
 sqlalchemy==2.0.23
 pyodbc==5.0.1
 alembic==1.13.0
+aioodbc==0.5.0
+psycopg2-binary==2.9.9
+pymysql==1.1.0
 
 # Data Processing
 pandas==2.1.4
@@ -19,6 +22,10 @@ streamlit==1.29.0
 plotly==5.18.0
 streamlit-aggrid==0.3.4.post3
 
+# API
+fastapi==0.109.0
+uvicorn==0.27.0
+
 # Security
 cryptography==41.0.7
 bcrypt==4.1.2
@@ -27,6 +34,9 @@ bcrypt==4.1.2
 tenacity==8.2.3
 tqdm==4.66.1
 click==8.1.7
+
+# Scheduling
+apscheduler==3.10.4
 
 # Export
 fpdf2==2.7.6

@@ -25,8 +25,10 @@ importlib.reload(src.data.database)
 from src.data.models import ComparisonMode
 from src.data.repositories import MetadataRepository
 from src.services.comparison import ComparisonService
+from src.services.persistence import get_persistence_service
 from src.utils.formatters import format_duration, format_number
-from src.utils.validators import validate_sql_identifier
+from src.utils.validators import validate_sql_identifier, validate_date_value
+import uuid
 
 logger = get_logger(__name__)
 
@@ -185,7 +187,7 @@ def render() -> None:
         selected_restricted = [t for t in selected_tables if is_restricted(t)]
         if len(selected_restricted) > 0 and len(selected_tables) > 1:
             st.error(f"⚠️ When selecting a Fact/Link table, you can only select ONE table. You selected: {', '.join(selected_tables)}")
-            st.info("Please select only one fact or link table mother fucker")
+            st.info("💡 Tip: Fact and Link tables must be compared individually due to their size and complexity.")
             selected_tables = []  # Clear selection to prevent comparison
 
         st.caption(f"Selected {len(selected_tables)} tables ({len(selected_restricted)} fact/link, {len(selected_tables) - len(selected_restricted)} other)")
@@ -201,17 +203,21 @@ def render() -> None:
 
             if is_incremental:
                 try:
-                    # Get date columns from the fact table
+                    # Validate identifiers to prevent SQL injection
+                    validate_sql_identifier(schema_name, "schema_name")
+                    validate_sql_identifier(fact_table, "table_name")
+
+                    # Get date columns from the fact table using parameterized query
                     source_conn = get_cached_connection(source_conn_info)
-                    date_columns_query = f"""
+                    date_columns_query = """
                         SELECT COLUMN_NAME
                         FROM INFORMATION_SCHEMA.COLUMNS
-                        WHERE TABLE_SCHEMA = '{schema_name}'
-                        AND TABLE_NAME = '{fact_table}'
+                        WHERE TABLE_SCHEMA = ?
+                        AND TABLE_NAME = ?
                         AND DATA_TYPE IN ('date', 'datetime', 'datetime2', 'smalldatetime')
                         ORDER BY COLUMN_NAME
                     """
-                    date_cols_result = source_conn.execute_query(date_columns_query)
+                    date_cols_result = source_conn.execute_query(date_columns_query, (schema_name, fact_table))
                     date_columns = [row['COLUMN_NAME'] for row in date_cols_result]
 
                     if date_columns:
@@ -468,8 +474,22 @@ def run_comparison(
         # Create comparison service
         comparison_service = ComparisonService(source_conn, target_conn)
 
+        # Initialize persistence service and create run
+        persistence = get_persistence_service()
+        run_id = str(uuid.uuid4())[:8]  # Short unique ID
+        persistence.create_run(
+            run_id=run_id,
+            source_server=source_conn_info.server,
+            source_database=source_conn_info.database,
+            target_server=target_conn_info.server,
+            target_database=target_conn_info.database,
+            schema_name=schema_name,
+        )
+        st.session_state.current_run_id = run_id
+
         # Progress tracking
         st.subheader("Comparison Progress")
+        st.caption(f"Run ID: `{run_id}`")
         progress_bar = st.progress(0)
         status_text = st.empty()
         results_container = st.container()
@@ -477,6 +497,9 @@ def run_comparison(
         results = []
         completed = 0
         total = len(selected_tables)
+        matching_count = 0
+        different_count = 0
+        failed_count = 0
 
         # Run comparisons
         for result in comparison_service.compare_multiple_tables(
@@ -498,9 +521,29 @@ def run_comparison(
             # Store result
             results.append(result)
 
+            # Save to persistence
+            persistence.save_result(run_id, result)
+
+            # Track statistics
+            if result.status == "failed":
+                failed_count += 1
+            elif result.is_match():
+                matching_count += 1
+            else:
+                different_count += 1
+
             # Show live results
             with results_container:
                 display_result_summary(result, source_conn, target_conn)
+
+        # Complete the run in persistence
+        persistence.complete_run(
+            run_id=run_id,
+            total_tables=total,
+            matching_tables=matching_count,
+            different_tables=different_count,
+            failed_tables=failed_count,
+        )
 
         # Don't disconnect - keep connections cached
 
@@ -612,14 +655,15 @@ def display_result_summary(result, source_conn=None, target_conn=None) -> None:
                     min_max_date = inc_config.get("min_max_date")
 
                     if date_col and min_max_date:
-                        # Validate column name to prevent SQL injection
+                        # Validate column name and date value to prevent SQL injection
                         try:
                             validate_sql_identifier(date_col, "date_column")
+                            validate_date_value(str(min_max_date), "min_max_date")
                             # Build safe query with validated identifiers
                             date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
                             st.info(f"📅 Filtering BOTH source and target: `{date_col} <= '{min_max_date}'`")
                         except Exception as e:
-                            st.error(f"Invalid date column name: {e}")
+                            st.error(f"Invalid date column name or date value: {e}")
                             date_filter = ""
 
                 # Validate schema and table names

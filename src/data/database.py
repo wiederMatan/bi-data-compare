@@ -188,14 +188,14 @@ class DatabaseConnection:
             conn.close()
 
     def execute_query(
-        self, query: str, params: Optional[dict[str, Any]] = None
+        self, query: str, params: Optional[Any] = None
     ) -> list[dict[str, Any]]:
         """
         Execute a SQL query and return results.
 
         Args:
             query: SQL query to execute
-            params: Optional query parameters
+            params: Optional query parameters (tuple, list, or dict)
 
         Returns:
             List of result rows as dictionaries
@@ -206,7 +206,7 @@ class DatabaseConnection:
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                if params:
+                if params is not None:
                     cursor.execute(query, params)
                 else:
                     cursor.execute(query)
@@ -227,14 +227,14 @@ class DatabaseConnection:
             ) from e
 
     def execute_scalar(
-        self, query: str, params: Optional[dict[str, Any]] = None
+        self, query: str, params: Optional[Any] = None
     ) -> Any:
         """
         Execute a SQL query and return a single scalar value.
 
         Args:
             query: SQL query to execute
-            params: Optional query parameters
+            params: Optional query parameters (tuple, list, or dict)
 
         Returns:
             Scalar result value
@@ -245,7 +245,7 @@ class DatabaseConnection:
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                if params:
+                if params is not None:
                     cursor.execute(query, params)
                 else:
                     cursor.execute(query)
