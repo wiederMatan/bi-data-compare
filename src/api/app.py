@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import comparisons, connections, history, notifications, scheduler
+from src.api.routes import auth, comparisons, connections, history, notifications, scheduler
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -30,6 +30,11 @@ def create_app() -> FastAPI:
     )
 
     # Include routers
+    app.include_router(
+        auth.router,
+        prefix="/api/v1/auth",
+        tags=["authentication"],
+    )
     app.include_router(
         connections.router,
         prefix="/api/v1/connections",
@@ -68,9 +73,12 @@ def create_app() -> FastAPI:
             "name": "BI Data Compare API",
             "version": "1.0.0",
             "endpoints": {
+                "auth": "/api/v1/auth",
                 "connections": "/api/v1/connections",
                 "comparisons": "/api/v1/comparisons",
                 "history": "/api/v1/history",
+                "scheduler": "/api/v1/scheduler",
+                "notifications": "/api/v1/notifications",
             },
         }
 

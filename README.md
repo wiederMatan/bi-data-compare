@@ -44,6 +44,30 @@ streamlit run src/ui/app.py
 | Shows specific differences | No | Yes | Yes |
 | Shows which rows differ | No | Yes | Yes |
 
+## Deploy to Streamlit Cloud
+
+1. **Fork/Push** this repository to your GitHub account
+
+2. **Go to** [share.streamlit.io](https://share.streamlit.io)
+
+3. **Click** "New app" and select:
+   - Repository: `your-username/bi-data-compare`
+   - Branch: `main`
+   - Main file path: `src/ui/app.py`
+
+4. **Configure Secrets** in Advanced Settings:
+   ```toml
+   [database]
+   source_server = "your-server.database.windows.net"
+   source_database = "your_db"
+   source_username = "username"
+   source_password = "password"
+   ```
+
+5. **Deploy** - The app will be live at `your-app.streamlit.app`
+
+See `.streamlit/secrets.toml.example` for full secrets configuration.
+
 ## Docker Setup
 
 The `docker-compose.yml` includes:

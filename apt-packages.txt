@@ -1,0 +1,6 @@
+# APT packages for Streamlit Cloud deployment
+curl
+gnupg2
+unixodbc
+unixodbc-dev
+libpq-dev

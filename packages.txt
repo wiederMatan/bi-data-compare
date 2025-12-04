@@ -1,0 +1,4 @@
+# System packages required for Streamlit Cloud
+# ODBC Driver for SQL Server
+unixodbc-dev
+libpq-dev
