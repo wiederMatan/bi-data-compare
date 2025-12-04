@@ -323,3 +323,226 @@ class CompressionRecommendation:
             self.recommended_compression != self.current_compression
             and self.estimated_savings_percent > 10.0
         )
+
+
+# ============ DBA Analysis Models ============
+
+
+@dataclass
+class ConnectionSource:
+    """Represents a unique connection source to the database."""
+
+    program_name: str
+    host_name: str
+    login_name: str
+    session_count: int = 0
+    active_requests: int = 0
+    idle_connections: int = 0
+    total_cpu_ms: int = 0
+    total_reads: int = 0
+    total_writes: int = 0
+    total_memory_kb: int = 0
+    open_transactions: int = 0
+    longest_transaction_seconds: float = 0.0
+    blocked_count: int = 0
+    blocking_count: int = 0
+
+    def get_display_name(self) -> str:
+        """Get a display-friendly source name."""
+        return f"{self.program_name or 'Unknown'} ({self.host_name or 'Unknown'})"
+
+    def get_resource_score(self) -> float:
+        """Calculate a resource cost score (higher = more expensive)."""
+        # Weighted scoring: CPU is most important, then I/O, then memory
+        cpu_score = self.total_cpu_ms / 1000.0  # Convert to seconds
+        io_score = (self.total_reads + self.total_writes) / 10000.0
+        memory_score = self.total_memory_kb / 1024.0  # Convert to MB
+        lock_score = (self.blocked_count + self.blocking_count * 2) * 10
+
+        return cpu_score + io_score + memory_score + lock_score
+
+
+@dataclass
+class QueryPattern:
+    """Represents a query pattern from a specific source."""
+
+    query_hash: str
+    query_text: str
+    source_program: str
+    source_host: str
+    execution_count: int = 0
+    total_worker_time_ms: int = 0
+    total_elapsed_time_ms: int = 0
+    total_logical_reads: int = 0
+    total_logical_writes: int = 0
+    total_physical_reads: int = 0
+    avg_worker_time_ms: float = 0.0
+    avg_elapsed_time_ms: float = 0.0
+    avg_logical_reads: float = 0.0
+    last_execution_time: Optional[datetime] = None
+    plan_count: int = 1
+
+    def get_truncated_query(self, max_length: int = 200) -> str:
+        """Get truncated query text for display."""
+        if len(self.query_text) <= max_length:
+            return self.query_text
+        return self.query_text[:max_length] + "..."
+
+    def get_cost_score(self) -> float:
+        """Calculate query cost score."""
+        return (
+            self.total_worker_time_ms / 1000.0
+            + self.total_logical_reads / 1000.0
+            + self.total_physical_reads / 100.0
+        )
+
+    def is_expensive(self) -> bool:
+        """Check if query is considered expensive."""
+        return (
+            self.avg_worker_time_ms > 1000  # > 1 second CPU
+            or self.avg_logical_reads > 10000  # > 10K reads
+            or self.avg_elapsed_time_ms > 5000  # > 5 seconds elapsed
+        )
+
+
+@dataclass
+class BlockingInfo:
+    """Represents blocking information between sessions."""
+
+    blocking_session_id: int
+    blocked_session_id: int
+    blocking_program: str
+    blocking_host: str
+    blocked_program: str
+    blocked_host: str
+    wait_type: str
+    wait_time_ms: int
+    wait_resource: str
+    blocking_query: Optional[str] = None
+    blocked_query: Optional[str] = None
+
+    def get_wait_time_seconds(self) -> float:
+        """Get wait time in seconds."""
+        return self.wait_time_ms / 1000.0
+
+
+@dataclass
+class LockInfo:
+    """Represents lock information for a session."""
+
+    session_id: int
+    program_name: str
+    host_name: str
+    resource_type: str
+    request_mode: str
+    request_status: str
+    resource_description: str
+    lock_count: int = 1
+
+
+@dataclass
+class SystemScorecard:
+    """Scorecard for a connecting system."""
+
+    system_name: str
+    host_name: str
+    login_name: str
+
+    # Connection metrics
+    total_connections: int = 0
+    active_connections: int = 0
+    idle_connections: int = 0
+    connection_pool_efficiency: float = 0.0
+
+    # Resource metrics
+    cpu_cost_seconds: float = 0.0
+    io_reads: int = 0
+    io_writes: int = 0
+    memory_mb: float = 0.0
+    lock_wait_seconds: float = 0.0
+    deadlock_count: int = 0
+
+    # Query metrics
+    total_queries: int = 0
+    distinct_query_patterns: int = 0
+    expensive_queries: int = 0
+    redundant_queries: int = 0
+
+    # Blocking metrics
+    times_blocked: int = 0
+    times_blocking: int = 0
+    avg_block_duration_ms: float = 0.0
+
+    # Overall score (higher = more problematic)
+    resource_score: float = 0.0
+    rank: int = 0
+
+    def calculate_score(self) -> None:
+        """Calculate overall resource score."""
+        self.resource_score = (
+            self.cpu_cost_seconds * 10
+            + (self.io_reads + self.io_writes) / 10000
+            + self.memory_mb
+            + self.lock_wait_seconds * 5
+            + self.deadlock_count * 100
+            + self.times_blocking * 20
+            + self.expensive_queries * 5
+        )
+
+
+@dataclass
+class RedundancyFinding:
+    """Represents a redundancy finding across systems."""
+
+    query_pattern: str
+    systems_involved: list[str] = field(default_factory=list)
+    total_executions: int = 0
+    potential_savings_percent: float = 0.0
+    recommendation: str = ""
+    severity: str = "medium"  # low, medium, high
+
+
+@dataclass
+class DBAAnalysisResult:
+    """Complete DBA analysis result."""
+
+    analyzed_at: datetime = field(default_factory=datetime.now)
+    server_name: str = ""
+    database_name: str = ""
+
+    # Connection analysis
+    connection_sources: list[ConnectionSource] = field(default_factory=list)
+    total_connections: int = 0
+    total_active: int = 0
+    total_idle: int = 0
+    connection_issues: list[str] = field(default_factory=list)
+
+    # Query analysis
+    query_patterns: list[QueryPattern] = field(default_factory=list)
+    top_expensive_queries: list[QueryPattern] = field(default_factory=list)
+
+    # Blocking analysis
+    current_blocking: list[BlockingInfo] = field(default_factory=list)
+    blocking_hotspots: list[str] = field(default_factory=list)
+
+    # System scorecards
+    system_scorecards: list[SystemScorecard] = field(default_factory=list)
+
+    # Redundancy findings
+    redundancy_findings: list[RedundancyFinding] = field(default_factory=list)
+
+    # Recommendations
+    recommendations: list[str] = field(default_factory=list)
+
+    def get_summary(self) -> dict[str, Any]:
+        """Get analysis summary."""
+        return {
+            "total_systems": len(self.connection_sources),
+            "total_connections": self.total_connections,
+            "active_connections": self.total_active,
+            "idle_connections": self.total_idle,
+            "blocking_chains": len(self.current_blocking),
+            "expensive_queries": len(self.top_expensive_queries),
+            "redundancy_issues": len(self.redundancy_findings),
+            "recommendations": len(self.recommendations),
+        }
