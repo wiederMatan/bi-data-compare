@@ -12,8 +12,12 @@ if project_root not in sys.path:
 from src.core.logging import get_logger
 from src.data.database import get_cached_connection
 from src.utils.validators import validate_sql_identifier, validate_date_value
+from src.ui.styles import apply_professional_style
 
 logger = get_logger(__name__)
+
+# Apply professional styling
+apply_professional_style()
 
 
 def render() -> None:
@@ -130,7 +134,9 @@ def render() -> None:
                     with col1:
                         st.markdown(f"### Source EXCEPT Target ({len(source_only)} rows)")
                         if source_only:
-                            df_source_only = pd.DataFrame(list(source_only), columns=compare_cols)
+                            # Convert tuples to list of dicts to ensure column alignment
+                            source_only_data = [dict(zip(compare_cols, row)) for row in source_only]
+                            df_source_only = pd.DataFrame(source_only_data)
                             st.dataframe(df_source_only, use_container_width=True, height=400)
                         else:
                             st.success("✅ All source rows exist in target")
@@ -138,7 +144,9 @@ def render() -> None:
                     with col2:
                         st.markdown(f"### Target EXCEPT Source ({len(target_only)} rows)")
                         if target_only:
-                            df_target_only = pd.DataFrame(list(target_only), columns=compare_cols)
+                            # Convert tuples to list of dicts to ensure column alignment
+                            target_only_data = [dict(zip(compare_cols, row)) for row in target_only]
+                            df_target_only = pd.DataFrame(target_only_data)
                             st.dataframe(df_target_only, use_container_width=True, height=400)
                         else:
                             st.success("✅ All target rows exist in source")

@@ -23,9 +23,13 @@ from src.core.logging import get_logger
 from src.services.export import ExportService
 from src.services.sync_script import SyncScriptGenerator
 from src.utils.formatters import format_number, format_percentage
+from src.ui.styles import apply_professional_style
 
 logger = get_logger(__name__)
 settings = get_settings()
+
+# Apply professional styling
+apply_professional_style()
 
 
 def render() -> None:

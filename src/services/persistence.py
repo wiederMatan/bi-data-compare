@@ -144,7 +144,7 @@ class ResultPersistenceService:
             INSERT INTO comparison_runs
             (run_id, started_at, source_server, source_database,
              target_server, target_database, schema_name)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_id,

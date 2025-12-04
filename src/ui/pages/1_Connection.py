@@ -20,8 +20,12 @@ import src.data.database
 importlib.reload(src.data.database)
 from src.data.models import AuthType, ConnectionInfo
 from src.utils.validators import validate_credentials, validate_database_name, validate_server_name
+from src.ui.styles import apply_professional_style
 
 logger = get_logger(__name__)
+
+# Apply professional styling
+apply_professional_style()
 
 
 @st.cache_data(ttl=300, show_spinner=False)

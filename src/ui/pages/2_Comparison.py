@@ -28,9 +28,13 @@ from src.services.comparison import ComparisonService
 from src.services.persistence import get_persistence_service
 from src.utils.formatters import format_duration, format_number
 from src.utils.validators import validate_sql_identifier, validate_date_value
+from src.ui.styles import apply_professional_style
 import uuid
 
 logger = get_logger(__name__)
+
+# Apply professional styling
+apply_professional_style()
 
 CACHE_DIR = os.path.join(project_root, "config")
 TABLES_CACHE = os.path.join(CACHE_DIR, "tables_cache.json")
@@ -354,10 +358,10 @@ def check_column_differences(source_conn_info, target_conn_info, schema_name: st
                                 try:
                                     cols_list = list(source_only)[:5]  # Limit columns shown
                                     query = f"SELECT TOP 10 [{'], ['.join(cols_list)}] FROM [{schema_name}].[{table_name}]"
-                                    result = source_conn.execute(query)
+                                    result = source_conn.execute_query(query)
                                     if result:
                                         import pandas as pd
-                                        df = pd.DataFrame(result.fetchall(), columns=cols_list)
+                                        df = pd.DataFrame(result)
                                         st.dataframe(df, use_container_width=True)
                                 except Exception as e:
                                     st.caption(f"Could not fetch sample: {e}")
@@ -375,10 +379,10 @@ def check_column_differences(source_conn_info, target_conn_info, schema_name: st
                                 try:
                                     cols_list = list(target_only)[:5]  # Limit columns shown
                                     query = f"SELECT TOP 10 [{'], ['.join(cols_list)}] FROM [{schema_name}].[{table_name}]"
-                                    result = target_conn.execute(query)
+                                    result = target_conn.execute_query(query)
                                     if result:
                                         import pandas as pd
-                                        df = pd.DataFrame(result.fetchall(), columns=cols_list)
+                                        df = pd.DataFrame(result)
                                         st.dataframe(df, use_container_width=True)
                                 except Exception as e:
                                     st.caption(f"Could not fetch sample: {e}")
@@ -699,7 +703,9 @@ def display_result_summary(result, source_conn=None, target_conn=None) -> None:
                         with col1:
                             st.markdown(f"**Source EXCEPT Target** ({len(source_only)} rows)")
                             if source_only:
-                                df_source_only = pd.DataFrame(list(source_only)[:10], columns=compare_cols)
+                                # Convert tuples to list of dicts to ensure column alignment
+                                source_only_data = [dict(zip(compare_cols, row)) for row in list(source_only)[:10]]
+                                df_source_only = pd.DataFrame(source_only_data)
                                 st.dataframe(df_source_only, use_container_width=True)
                             else:
                                 st.success("0 - All source rows exist in target")
@@ -707,7 +713,9 @@ def display_result_summary(result, source_conn=None, target_conn=None) -> None:
                         with col2:
                             st.markdown(f"**Target EXCEPT Source** ({len(target_only)} rows)")
                             if target_only:
-                                df_target_only = pd.DataFrame(list(target_only)[:10], columns=compare_cols)
+                                # Convert tuples to list of dicts to ensure column alignment
+                                target_only_data = [dict(zip(compare_cols, row)) for row in list(target_only)[:10]]
+                                df_target_only = pd.DataFrame(target_only_data)
                                 st.dataframe(df_target_only, use_container_width=True)
                             else:
                                 st.success("0 - All target rows exist in source")
