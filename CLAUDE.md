@@ -4,33 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BI Data Compare is a SQL Server data comparison and compression tool built with Python and Streamlit. It compares tables between source and target SQL Server databases, identifying schema differences and data discrepancies.
+BI Data Compare is a SQL Server data comparison tool built with Python and Streamlit. It compares tables between source and target SQL Server databases, identifying schema differences and data discrepancies.
 
 ## Commands
 
-### Run the Application
+### Run with Docker (Recommended)
+```bash
+docker compose up -d --build
+```
+The app runs at `http://localhost:8503`
+
+### Run Locally
 ```bash
 source venv/bin/activate
 streamlit run src/ui/app.py
 ```
-The app runs at `http://localhost:8501`
 
 ### Run Tests
 ```bash
-# All tests with coverage
-pytest
-
-# Single test file
-pytest tests/unit/test_models.py
-
-# Specific test
-pytest tests/unit/test_models.py::test_function_name
-
-# Run only unit tests
-pytest -m unit
-
-# Run only integration tests
-pytest -m integration
+pytest                              # All tests with coverage
+pytest tests/unit/test_models.py   # Single test file
+pytest -m unit                      # Unit tests only
+pytest -m integration               # Integration tests only
 ```
 
 ### Code Quality
@@ -39,7 +34,6 @@ black src tests                  # Format code
 isort src tests                  # Sort imports
 flake8 src tests                 # Lint
 mypy src                         # Type check
-pylint src                       # Additional linting
 ```
 
 ## Architecture
@@ -49,7 +43,7 @@ The application follows Clean Architecture with four layers:
 ```
 src/
 ├── ui/          # Presentation - Streamlit pages and components
-├── services/    # Application - Business logic (comparison, compression, export)
+├── services/    # Application - Business logic (comparison, export)
 ├── data/        # Domain - Models, repositories, database connections
 ├── core/        # Infrastructure - Config, logging, exceptions
 └── utils/       # Cross-cutting - Formatters, validators, security
@@ -60,29 +54,39 @@ src/
 **Comparison Flow:**
 `UI → ComparisonService → MetadataRepository/TableDataRepository → DatabaseConnection → Results`
 
-**Comparison Modes:**
-- `QUICK`: Checksum-based, fast, doesn't show specific differences
-- `STANDARD`: Row-by-row, shows which rows/columns differ
-- `DEEP`: Complete audit (indexes/constraints planned but not implemented)
+**Connection Management:**
+- Connections are cached globally via `get_cached_connection()` in `src/data/database.py`
+- Avoids duplicate connect/disconnect cycles
+- Use `clear_connection_cache()` to reset
+
+**Table Selection Rules:**
+- Dim/stg/mrr tables: Can select multiple
+- Fact/Link tables: Can only select ONE at a time (no mixing with other tables)
+
+**Incremental Comparison:**
+- Available for fact tables only
+- Select a date column to compare max values between source and target
 
 ### Core Files
-- `src/services/comparison.py` - Main comparison logic with `ComparisonService`
+- `src/services/comparison.py` - Main comparison logic (runs sequentially, not parallel)
 - `src/data/models.py` - All data models (`ComparisonResult`, `TableInfo`, `ColumnInfo`, etc.)
-- `src/data/database.py` - Database connection management with SQLAlchemy
-- `src/data/repositories.py` - Data access layer (`MetadataRepository`, `TableDataRepository`)
-- `src/core/config.py` - Pydantic-based configuration with YAML support
+- `src/data/database.py` - Database connection management with caching
+- `src/data/repositories.py` - Data access layer
+- `src/ui/pages/2_Comparison.py` - Main comparison UI with log viewer
+- `src/ui/pages/4_Drill_Down.py` - EXCEPT and row-by-row comparison
 
 ### Configuration
 - Environment variables via `.env` file
 - YAML configuration in `config/config.yaml`
 - Settings singleton accessed via `get_settings()` from `src/core/config`
 
-### Data Processing
-- Large tables processed in configurable chunks (`chunk_size` setting, default 10000)
-- Multiple tables compared in parallel using `ThreadPoolExecutor` (`max_workers` setting)
-- Supports chunked data export for memory efficiency
+### Docker Setup
+- `docker-compose.yml` - Defines app + 2 SQL Server containers (dev/qa)
+- App container: Port 8503
+- SQL Server dev: Port 1434
+- SQL Server qa: Port 1433
 
 ## Prerequisites
 - Python 3.9+
-- ODBC Driver 17 for SQL Server
-- SQL Server database access
+- ODBC Driver 18 for SQL Server
+- Docker (for containerized setup)
