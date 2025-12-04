@@ -9,6 +9,10 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
+# Load .env file if it exists (for local development)
+from dotenv import load_dotenv
+load_dotenv()
+
 # Load cache first
 from src.ui.cache_loader import load_all_cache
 load_all_cache()
@@ -21,6 +25,20 @@ from src.utils.validators import validate_credentials, validate_database_name, v
 from src.ui.styles import apply_professional_style
 
 logger = get_logger(__name__)
+
+
+def get_env_defaults() -> dict:
+    """Get default connection values from environment variables."""
+    return {
+        "source_server": os.environ.get("SOURCE_SERVER", "dev"),
+        "source_database": os.environ.get("SOURCE_DATABASE", "master"),
+        "source_username": os.environ.get("SOURCE_USERNAME", "sa"),
+        "source_password": os.environ.get("SOURCE_PASSWORD", ""),
+        "target_server": os.environ.get("TARGET_SERVER", "qa"),
+        "target_database": os.environ.get("TARGET_DATABASE", "master"),
+        "target_username": os.environ.get("TARGET_USERNAME", "sa"),
+        "target_password": os.environ.get("TARGET_PASSWORD", ""),
+    }
 
 # Apply professional styling
 apply_professional_style()
@@ -107,7 +125,17 @@ def render() -> None:
 
     # Load cached settings on first run
     if "cache_loaded" not in st.session_state:
+        # First try to load from cache file
         cached = load_cached_settings()
+
+        # Get environment defaults
+        env_defaults = get_env_defaults()
+
+        # Apply environment defaults first, then override with cached values
+        for key, value in env_defaults.items():
+            if key not in st.session_state and value:
+                st.session_state[key] = value
+
         if cached:
             for key, value in cached.items():
                 if key not in st.session_state:
@@ -115,6 +143,7 @@ def render() -> None:
             # Auto-restore ConnectionInfo objects
             restore_connection_from_cache("source", cached)
             restore_connection_from_cache("target", cached)
+
         st.session_state.cache_loaded = True
 
     # Create two columns for source and target
@@ -144,10 +173,17 @@ def render_connection_form(prefix: str) -> None:
     Args:
         prefix: Either 'source' or 'target'
     """
-    # Server
+    # Get environment defaults
+    env_defaults = get_env_defaults()
+
+    # Server - allow text input for flexibility
     servers = ["qa", "dev"]
-    # Get cached server index
-    cached_server = st.session_state.get(f"{prefix}_server", servers[0])
+    env_server = env_defaults.get(f"{prefix}_server", "")
+    if env_server and env_server not in servers:
+        servers.insert(0, env_server)
+
+    # Get cached/env server
+    cached_server = st.session_state.get(f"{prefix}_server", env_server or servers[0])
     server_index = servers.index(cached_server) if cached_server in servers else 0
 
     server = st.selectbox(
@@ -158,16 +194,19 @@ def render_connection_form(prefix: str) -> None:
         help="Select the SQL Server instance.",
     )
 
-    # SQL Authentication credentials
+    # SQL Authentication credentials - use env defaults
+    env_username = env_defaults.get(f"{prefix}_username", "sa")
+    env_password = env_defaults.get(f"{prefix}_password", "")
+
     username = st.text_input(
         "Username",
-        value=st.session_state.get(f"{prefix}_username", "sa"),
+        value=st.session_state.get(f"{prefix}_username", env_username),
         key=f"{prefix}_username",
         help="SQL Server username",
     )
     password = st.text_input(
         "Password",
-        value=st.session_state.get(f"{prefix}_password", "YourStrong@Passw0rd"),
+        value=st.session_state.get(f"{prefix}_password", env_password),
         type="password",
         key=f"{prefix}_password",
         help="SQL Server password",
