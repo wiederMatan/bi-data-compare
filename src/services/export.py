@@ -468,3 +468,180 @@ class ExportService:
         """
 
         return html
+
+    def export_comparison_to_pdf(
+        self,
+        results: list[ComparisonResult],
+        output_path: str,
+        title: str = "Database Comparison Report",
+    ) -> None:
+        """
+        Export comparison results to PDF.
+
+        Args:
+            results: List of comparison results
+            output_path: Output file path
+            title: Report title
+
+        Raises:
+            ExportError: If export fails
+        """
+        try:
+            logger.info(f"Exporting comparison results to PDF: {output_path}")
+
+            # Create PDF object
+            pdf = FPDF()
+            pdf.set_auto_page_break(auto=True, margin=15)
+
+            # Add title page
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 24)
+            pdf.cell(0, 20, title, ln=True, align="C")
+
+            pdf.set_font("Arial", "", 12)
+            pdf.cell(0, 10, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True, align="C")
+            pdf.ln(10)
+
+            # Summary statistics
+            total_tables = len(results)
+            matching_tables = sum(1 for r in results if r.is_match())
+            failed_tables = sum(1 for r in results if r.status == "failed")
+            different_tables = total_tables - matching_tables - failed_tables
+
+            total_source_rows = sum(r.source_row_count for r in results)
+            total_target_rows = sum(r.target_row_count for r in results)
+
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 12, "Summary", ln=True)
+            pdf.set_font("Arial", "", 11)
+
+            # Summary box
+            pdf.set_fill_color(240, 240, 240)
+            pdf.cell(0, 8, f"Total Tables Compared: {total_tables}", ln=True, fill=True)
+            pdf.cell(0, 8, f"Matching Tables: {matching_tables}", ln=True)
+            pdf.cell(0, 8, f"Tables with Differences: {different_tables}", ln=True)
+            pdf.cell(0, 8, f"Failed Comparisons: {failed_tables}", ln=True, fill=True)
+            pdf.cell(0, 8, f"Total Source Rows: {total_source_rows:,}", ln=True)
+            pdf.cell(0, 8, f"Total Target Rows: {total_target_rows:,}", ln=True, fill=True)
+            pdf.ln(10)
+
+            # Results table
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 12, "Comparison Results", ln=True)
+
+            # Table header
+            pdf.set_font("Arial", "B", 9)
+            pdf.set_fill_color(0, 102, 204)
+            pdf.set_text_color(255, 255, 255)
+
+            col_widths = [50, 25, 25, 25, 20, 45]
+            headers = ["Table", "Source", "Target", "Match %", "Status", "Summary"]
+
+            for i, header in enumerate(headers):
+                pdf.cell(col_widths[i], 8, header, border=1, fill=True)
+            pdf.ln()
+
+            # Table rows
+            pdf.set_font("Arial", "", 8)
+            pdf.set_text_color(0, 0, 0)
+
+            for i, result in enumerate(results):
+                fill = i % 2 == 0
+                if fill:
+                    pdf.set_fill_color(248, 248, 248)
+                else:
+                    pdf.set_fill_color(255, 255, 255)
+
+                # Truncate long names
+                table_name = result.source_table.split(".")[-1][:25]
+                summary = result.get_summary()[:30] if result.get_summary() else ""
+
+                # Status color coding
+                if result.is_match():
+                    status = "MATCH"
+                elif result.status == "failed":
+                    status = "FAILED"
+                else:
+                    status = "DIFF"
+
+                pdf.cell(col_widths[0], 7, table_name, border=1, fill=fill)
+                pdf.cell(col_widths[1], 7, f"{result.source_row_count:,}", border=1, fill=fill)
+                pdf.cell(col_widths[2], 7, f"{result.target_row_count:,}", border=1, fill=fill)
+                pdf.cell(col_widths[3], 7, f"{result.get_match_percentage():.1f}%", border=1, fill=fill)
+                pdf.cell(col_widths[4], 7, status, border=1, fill=fill)
+                pdf.cell(col_widths[5], 7, summary, border=1, fill=fill)
+                pdf.ln()
+
+                # Add new page if needed
+                if pdf.get_y() > 260:
+                    pdf.add_page()
+                    # Repeat header on new page
+                    pdf.set_font("Arial", "B", 9)
+                    pdf.set_fill_color(0, 102, 204)
+                    pdf.set_text_color(255, 255, 255)
+                    for j, header in enumerate(headers):
+                        pdf.cell(col_widths[j], 8, header, border=1, fill=True)
+                    pdf.ln()
+                    pdf.set_font("Arial", "", 8)
+                    pdf.set_text_color(0, 0, 0)
+
+            # Schema differences section
+            schema_diffs = []
+            for result in results:
+                for diff in result.schema_differences:
+                    schema_diffs.append({
+                        "table": diff.table_name,
+                        "column": diff.column_name or "-",
+                        "type": diff.difference_type.value,
+                        "description": diff.description[:50] if diff.description else "",
+                    })
+
+            if schema_diffs:
+                pdf.add_page()
+                pdf.set_font("Arial", "B", 16)
+                pdf.cell(0, 12, "Schema Differences", ln=True)
+
+                pdf.set_font("Arial", "B", 9)
+                pdf.set_fill_color(0, 102, 204)
+                pdf.set_text_color(255, 255, 255)
+
+                schema_cols = [45, 45, 40, 60]
+                schema_headers = ["Table", "Column", "Type", "Description"]
+
+                for i, header in enumerate(schema_headers):
+                    pdf.cell(schema_cols[i], 8, header, border=1, fill=True)
+                pdf.ln()
+
+                pdf.set_font("Arial", "", 8)
+                pdf.set_text_color(0, 0, 0)
+
+                for i, diff in enumerate(schema_diffs[:100]):  # Limit to 100 diffs
+                    fill = i % 2 == 0
+                    if fill:
+                        pdf.set_fill_color(248, 248, 248)
+                    else:
+                        pdf.set_fill_color(255, 255, 255)
+
+                    table = diff["table"].split(".")[-1][:22]
+                    column = diff["column"][:22]
+
+                    pdf.cell(schema_cols[0], 7, table, border=1, fill=fill)
+                    pdf.cell(schema_cols[1], 7, column, border=1, fill=fill)
+                    pdf.cell(schema_cols[2], 7, diff["type"][:20], border=1, fill=fill)
+                    pdf.cell(schema_cols[3], 7, diff["description"], border=1, fill=fill)
+                    pdf.ln()
+
+                    if pdf.get_y() > 260:
+                        pdf.add_page()
+
+            # Save PDF
+            pdf.output(output_path)
+            logger.info("PDF export completed successfully")
+
+        except Exception as e:
+            logger.error(f"Failed to export to PDF: {str(e)}")
+            raise ExportError(
+                f"Failed to export to PDF: {str(e)}",
+                export_format="pdf",
+                file_path=output_path,
+            ) from e
