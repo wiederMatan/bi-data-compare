@@ -52,8 +52,19 @@ def render() -> None:
             source_conn = get_cached_connection(source_conn_info)
             target_conn = get_cached_connection(target_conn_info)
 
-            # Fetch data
-            query = f"SELECT TOP 1000 * FROM [{schema_name}].[{table_name}]"
+            # Check if incremental comparison filter should be applied
+            date_filter = ""
+            inc_config = st.session_state.get("incremental_config")
+            if inc_config and inc_config.get("table") == table_name:
+                date_col = inc_config.get("date_column")
+                min_max_date = inc_config.get("min_max_date")
+
+                if date_col and min_max_date:
+                    date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
+                    st.info(f"📅 **Incremental filter active:** Comparing only rows where `{date_col} <= '{min_max_date}'` (applied to BOTH source and target)")
+
+            # Fetch data with filter applied to both sides
+            query = f"SELECT TOP 1000 * FROM [{schema_name}].[{table_name}]{date_filter}"
             source_rows = source_conn.execute_query(query)
             target_rows = target_conn.execute_query(query)
 
