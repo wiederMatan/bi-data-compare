@@ -35,19 +35,18 @@ def get_cached_connection(connection_info: ConnectionInfo) -> "DatabaseConnectio
     with _cache_lock:
         if cache_key in _connection_cache:
             conn = _connection_cache[cache_key]
-            # Check if still connected
+            # Only check if engine exists - pool_pre_ping handles connection health
             if conn._engine is not None:
-                try:
-                    conn.test_connection()
-                    return conn
-                except Exception:
-                    # Connection lost, remove from cache
-                    del _connection_cache[cache_key]
+                return conn
+            else:
+                # Engine was disposed, remove from cache
+                del _connection_cache[cache_key]
 
         # Create new connection
         conn = DatabaseConnection(connection_info)
         conn.connect()
         _connection_cache[cache_key] = conn
+        logger.debug(f"Created new cached connection for {cache_key}")
         return conn
 
 
@@ -87,7 +86,7 @@ class DatabaseConnection:
         """
         try:
             connection_string = self._build_connection_string()
-            logger.info(
+            logger.debug(
                 f"Connecting to {self.connection_info.get_display_name()}"
             )
 
@@ -107,7 +106,7 @@ class DatabaseConnection:
 
             self._session_factory = sessionmaker(bind=self._engine)
 
-            logger.info(
+            logger.debug(
                 f"Successfully connected to {self.connection_info.get_display_name()}"
             )
 
@@ -124,7 +123,7 @@ class DatabaseConnection:
     def disconnect(self) -> None:
         """Close database connection."""
         if self._engine:
-            logger.info(
+            logger.debug(
                 f"Disconnecting from {self.connection_info.get_display_name()}"
             )
             self._engine.dispose()

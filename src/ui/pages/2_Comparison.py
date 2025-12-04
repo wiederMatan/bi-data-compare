@@ -5,7 +5,6 @@ import re
 import json
 import pickle
 import streamlit as st
-import importlib
 from datetime import datetime
 
 # Add project root to Python path
@@ -19,9 +18,7 @@ load_all_cache()
 
 from src.core.logging import get_logger
 from src.core.config import get_settings
-import src.data.database
 from src.data.database import get_cached_connection
-importlib.reload(src.data.database)
 from src.data.models import ComparisonMode
 from src.data.repositories import MetadataRepository
 from src.services.comparison import ComparisonService

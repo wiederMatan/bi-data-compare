@@ -3,7 +3,6 @@ import sys
 import os
 import json
 import streamlit as st
-import importlib
 
 # Add project root to Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -17,7 +16,6 @@ load_all_cache()
 from src.core.exceptions import ConnectionError as AppConnectionError
 from src.core.logging import get_logger
 import src.data.database
-importlib.reload(src.data.database)
 from src.data.models import AuthType, ConnectionInfo
 from src.utils.validators import validate_credentials, validate_database_name, validate_server_name
 from src.ui.styles import apply_professional_style
