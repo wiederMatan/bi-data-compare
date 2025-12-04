@@ -1,5 +1,7 @@
 # BI Data Compare
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/wiederMatan/bi-data-compare)
+
 SQL Server database comparison tool built with Python and Streamlit. Compare tables between source and target databases, identify schema differences, and analyze data discrepancies.
 
 ## Quick Start
@@ -43,6 +45,12 @@ streamlit run src/ui/app.py
 | Data comparison | Checksum | Row-by-row | Row-by-row |
 | Shows specific differences | No | Yes | Yes |
 | Shows which rows differ | No | Yes | Yes |
+
+## Deploy to Render (One-Click)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/wiederMatan/bi-data-compare)
+
+Click the button above to deploy instantly to Render's free tier.
 
 ## Deploy to Streamlit Cloud
 
