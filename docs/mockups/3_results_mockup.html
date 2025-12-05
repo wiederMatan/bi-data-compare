@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results Page Mockup - BI Data Compare</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1f2937;
+            font-size: 28px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #374151;
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .metric-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .metric-delta {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .metric-delta.positive {
+            color: #16a34a;
+        }
+        .metric-delta.negative {
+            color: #dc2626;
+        }
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        .chart-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            background: #fafafa;
+        }
+        .chart-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: #374151;
+        }
+        .pie-chart {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            margin: 0 auto;
+            background: conic-gradient(
+                #22c55e 0deg 216deg,
+                #f59e0b 216deg 288deg,
+                #ef4444 288deg 360deg
+            );
+            position: relative;
+        }
+        .pie-legend {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            height: 180px;
+            padding-top: 20px;
+        }
+        .bar-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .bar-pair {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+            height: 150px;
+        }
+        .bar {
+            width: 16px;
+            border-radius: 2px 2px 0 0;
+        }
+        .bar-source {
+            background: #3b82f6;
+        }
+        .bar-target {
+            background: #f59e0b;
+        }
+        .bar-label {
+            font-size: 10px;
+            color: #6b7280;
+            margin-top: 4px;
+            text-align: center;
+            max-width: 50px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .divider {
+            border-top: 1px solid #e5e7eb;
+            margin: 30px 0;
+        }
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+        .result-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .result-header {
+            padding: 12px 16px;
+            background: #f9fafb;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .result-title {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-match {
+            color: #16a34a;
+        }
+        .status-diff {
+            color: #f59e0b;
+        }
+        .status-fail {
+            color: #dc2626;
+        }
+        .result-content {
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .result-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-outline {
+            background: white;
+            border: 1px solid #d1d5db;
+            color: #374151;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+        .export-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .sync-section {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .table-list {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 16px 0;
+        }
+        .table-item {
+            padding: 10px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .mockup-label {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .schema-diff-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .schema-diff-table th, .schema-diff-table td {
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+            font-size: 13px;
+        }
+        .schema-diff-table th {
+            background: #f9fafb;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="mockup-label">MOCKUP</div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Comparison Results</h1>
+        </div>
+
+        <!-- Summary Dashboard -->
+        <div class="section">
+            <h2>&#128202; Summary Dashboard</h2>
+
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <div class="metric-label">Total Tables</div>
+                    <div class="metric-value">20</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">&#9989; Matching</div>
+                    <div class="metric-value">15</div>
+                    <div class="metric-delta positive">75%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">&#9888; Different</div>
+                    <div class="metric-value">4</div>
+                    <div class="metric-delta negative">-20%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">&#10060; Failed</div>
+                    <div class="metric-value">1</div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-container">
+                    <div class="chart-title">Comparison Status Distribution</div>
+                    <div class="pie-chart"></div>
+                    <div class="pie-legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #22c55e;"></div>
+                            Matching
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #f59e0b;"></div>
+                            Different
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ef4444;"></div>
+                            Failed
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Row Count Comparison (Top 10 Tables)</div>
+                    <div class="bar-chart">
+                        <div class="bar-group">
+                            <div class="bar-pair">
+                                <div class="bar bar-source" style="height: 120px;"></div>
+                                <div class="bar bar-target" style="height: 120px;"></div>
+                            </div>
+                            <div class="bar-label">dim_cust</div>
+                        </div>
+                        <div class="bar-group">
+                            <div class="bar-pair">
+                                <div class="bar bar-source" style="height: 80px;"></div>
+                                <div class="bar bar-target" style="height: 75px;"></div>
+                            </div>
+                            <div class="bar-label">dim_prod</div>
+                        </div>
+                        <div class="bar-group">
+                            <div class="bar-pair">
+                                <div class="bar bar-source" style="height: 150px;"></div>
+                                <div class="bar bar-target" style="height: 150px;"></div>
+                            </div>
+                            <div class="bar-label">fact_sales</div>
+                        </div>
+                        <div class="bar-group">
+                            <div class="bar-pair">
+                                <div class="bar bar-source" style="height: 60px;"></div>
+                                <div class="bar bar-target" style="height: 60px;"></div>
+                            </div>
+                            <div class="bar-label">stg_ord</div>
+                        </div>
+                        <div class="bar-group">
+                            <div class="bar-pair">
+                                <div class="bar bar-source" style="height: 100px;"></div>
+                                <div class="bar bar-target" style="height: 95px;"></div>
+                            </div>
+                            <div class="bar-label">mrr_inv</div>
+                        </div>
+                    </div>
+                    <div class="pie-legend" style="margin-top: 8px;">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #3b82f6;"></div>
+                            Source
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #f59e0b;"></div>
+                            Target
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Detailed Results -->
+        <div class="section">
+            <h2>Detailed Results</h2>
+
+            <div class="filter-row">
+                <div class="form-group">
+                    <label>Filter by Status</label>
+                    <select>
+                        <option>All</option>
+                        <option>Matching</option>
+                        <option>Different</option>
+                        <option>Failed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Sort by</label>
+                    <select>
+                        <option>Table Name</option>
+                        <option>Source Rows</option>
+                        <option>Differences</option>
+                        <option>Duration</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Order</label>
+                    <select>
+                        <option>Ascending</option>
+                        <option>Descending</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Result Items -->
+            <div class="result-item">
+                <div class="result-header">
+                    <span class="result-title status-match">&#9989; Match - dim_customer</span>
+                    <span>&#9660;</span>
+                </div>
+                <div class="result-content">
+                    <div class="result-metrics">
+                        <div class="metric-card">
+                            <div class="metric-label">Source Rows</div>
+                            <div class="metric-value" style="font-size: 20px;">12,450</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Target Rows</div>
+                            <div class="metric-value" style="font-size: 20px;">12,450</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Match %</div>
+                            <div class="metric-value" style="font-size: 20px;">100.0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-item">
+                <div class="result-header">
+                    <span class="result-title status-diff">&#9888; Different - dim_product</span>
+                    <span>&#9660;</span>
+                </div>
+                <div class="result-content">
+                    <div class="result-metrics">
+                        <div class="metric-card">
+                            <div class="metric-label">Source Rows</div>
+                            <div class="metric-value" style="font-size: 20px;">1,245</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Target Rows</div>
+                            <div class="metric-value" style="font-size: 20px;">1,243</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Match %</div>
+                            <div class="metric-value" style="font-size: 20px;">99.8%</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" style="margin-top: 16px;">&#128270; View Data Differences</button>
+
+                    <div style="margin-top: 16px;">
+                        <strong>Schema Differences:</strong>
+                        <table class="schema-diff-table">
+                            <tr>
+                                <th>Column</th>
+                                <th>Type</th>
+                                <th>Source</th>
+                                <th>Target</th>
+                                <th>Description</th>
+                            </tr>
+                            <tr>
+                                <td>description</td>
+                                <td>type_mismatch</td>
+                                <td>VARCHAR(100)</td>
+                                <td>VARCHAR(200)</td>
+                                <td>Column type differs</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-item">
+                <div class="result-header">
+                    <span class="result-title status-fail">&#10060; Failed - fact_orders</span>
+                    <span>&#9660;</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Export Options -->
+        <div class="section">
+            <h2>&#128190; Export Results</h2>
+            <div class="export-row">
+                <button class="btn btn-outline btn-full">&#128202; Export to Excel</button>
+                <button class="btn btn-outline btn-full" disabled>&#128196; Export to CSV</button>
+                <button class="btn btn-outline btn-full">&#127760; Export to HTML</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Sync Script Generation -->
+        <div class="sync-section">
+            <h2>&#128260; Generate Sync Scripts</h2>
+            <p style="color: #6b7280; margin-bottom: 16px;">Generate SQL scripts to synchronize target database with source.</p>
+
+            <div class="form-group">
+                <label>Select Tables for Sync Script</label>
+            </div>
+
+            <div class="table-list">
+                <div class="table-item">
+                    <input type="checkbox" />
+                    <span>dim_product</span>
+                </div>
+                <div class="table-item">
+                    <input type="checkbox" />
+                    <span>stg_orders</span>
+                </div>
+                <div class="table-item">
+                    <input type="checkbox" />
+                    <span>mrr_inventory</span>
+                </div>
+            </div>
+
+            <button class="btn btn-primary">&#9881; Generate Sync Scripts</button>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DBA Analysis Page Mockup - BI Data Compare</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1f2937;
+            font-size: 28px;
+        }
+        .header p {
+            color: #6b7280;
+            margin-top: 8px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #374151;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+        .section h3 {
+            color: #374151;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .form-group select {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+        .btn {
+            padding: 12px 32px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-outline {
+            background: white;
+            border: 1px solid #d1d5db;
+            color: #374151;
+        }
+        .center-btn {
+            display: flex;
+            justify-content: center;
+            margin: 24px 0;
+        }
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .metric-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .divider {
+            border-top: 1px solid #e5e7eb;
+            margin: 30px 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 24px;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        .data-table th, .data-table td {
+            padding: 10px 12px;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+            font-size: 13px;
+        }
+        .data-table th {
+            background: #f9fafb;
+            font-weight: 500;
+            color: #374151;
+        }
+        .chart-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            background: #fafafa;
+        }
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 16px;
+            height: 200px;
+            padding-top: 20px;
+        }
+        .bar-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .bar-pair {
+            display: flex;
+            gap: 4px;
+            align-items: flex-end;
+            height: 160px;
+        }
+        .bar {
+            width: 24px;
+            border-radius: 4px 4px 0 0;
+        }
+        .bar-cpu {
+            background: #3b82f6;
+        }
+        .bar-io {
+            background: #f59e0b;
+        }
+        .bar-label {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 8px;
+            text-align: center;
+            max-width: 80px;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 16px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+        .query-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .query-header {
+            padding: 12px 16px;
+            background: #f9fafb;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .query-content {
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .query-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .code-block {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 16px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+        .blocking-item {
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .blocking-header {
+            padding: 12px 16px;
+            background: #fef2f2;
+            color: #dc2626;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .blocking-content {
+            padding: 16px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .blocking-side {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .blocking-side h4 {
+            margin-bottom: 12px;
+            color: #374151;
+        }
+        .recommendation-high {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 16px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        .recommendation-medium {
+            background: #fefce8;
+            border-left: 4px solid #eab308;
+            padding: 16px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        .recommendation-low {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 16px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        .finding-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            padding: 16px;
+        }
+        .finding-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .severity-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .severity-high {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        .severity-medium {
+            background: #fefce8;
+            color: #ca8a04;
+        }
+        .mockup-label {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .success-message {
+            background: #dcfce7;
+            color: #166534;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .warning-message {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 12px 16px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mockup-label">MOCKUP</div>
+
+    <div class="container">
+        <div class="header">
+            <h1>DBA Workload Analysis</h1>
+            <p>Analyze database connections, query patterns, and resource consumption.</p>
+        </div>
+
+        <!-- Database Selection -->
+        <div class="section">
+            <h3>Select Database to Analyze</h3>
+            <div class="form-group">
+                <label>Database</label>
+                <select>
+                    <option>Source: dev/DWH</option>
+                    <option>Target: qa/DWH</option>
+                </select>
+            </div>
+            <div class="center-btn">
+                <button class="btn btn-primary">Run Analysis</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Summary Section -->
+        <div class="section">
+            <h3>Summary</h3>
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <div class="metric-label">Total Systems</div>
+                    <div class="metric-value">12</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Connections</div>
+                    <div class="metric-value">156</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Blocking Chains</div>
+                    <div class="metric-value">2</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Recommendations</div>
+                    <div class="metric-value">8</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active">System Scorecards</button>
+            <button class="tab">Expensive Queries</button>
+            <button class="tab">Blocking Analysis</button>
+            <button class="tab">Redundancies</button>
+            <button class="tab">Recommendations</button>
+        </div>
+
+        <!-- Tab Content: System Scorecards -->
+        <div class="section">
+            <h3>System-by-System Scorecard</h3>
+            <p style="color: #6b7280; margin-bottom: 16px;">Systems ranked by resource cost (higher score = more resource consumption)</p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>System</th>
+                        <th>Host</th>
+                        <th>Connections</th>
+                        <th>Active</th>
+                        <th>Idle</th>
+                        <th>CPU (sec)</th>
+                        <th>I/O Reads</th>
+                        <th>I/O Writes</th>
+                        <th>Memory (MB)</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>ETL_Service</td>
+                        <td>etl-server-01</td>
+                        <td>45</td>
+                        <td>12</td>
+                        <td>33</td>
+                        <td>1,245.3</td>
+                        <td>15,234,567</td>
+                        <td>2,345,678</td>
+                        <td>512.4</td>
+                        <td>98.5</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>ReportServer</td>
+                        <td>report-srv</td>
+                        <td>32</td>
+                        <td>8</td>
+                        <td>24</td>
+                        <td>856.7</td>
+                        <td>8,456,123</td>
+                        <td>123,456</td>
+                        <td>256.2</td>
+                        <td>72.3</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>WebApp_Prod</td>
+                        <td>web-prod-01</td>
+                        <td>28</td>
+                        <td>15</td>
+                        <td>13</td>
+                        <td>423.1</td>
+                        <td>4,567,890</td>
+                        <td>567,890</td>
+                        <td>128.8</td>
+                        <td>54.6</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>Analytics_Job</td>
+                        <td>analytics-srv</td>
+                        <td>18</td>
+                        <td>5</td>
+                        <td>13</td>
+                        <td>312.5</td>
+                        <td>2,345,678</td>
+                        <td>456,789</td>
+                        <td>96.4</td>
+                        <td>41.2</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Resource Distribution Chart -->
+            <div class="chart-container">
+                <h4 style="margin-bottom: 16px;">Resource Distribution by System</h4>
+                <div class="bar-chart">
+                    <div class="bar-group">
+                        <div class="bar-pair">
+                            <div class="bar bar-cpu" style="height: 140px;"></div>
+                            <div class="bar bar-io" style="height: 150px;"></div>
+                        </div>
+                        <div class="bar-label">ETL_Service</div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-pair">
+                            <div class="bar bar-cpu" style="height: 95px;"></div>
+                            <div class="bar bar-io" style="height: 85px;"></div>
+                        </div>
+                        <div class="bar-label">ReportServer</div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-pair">
+                            <div class="bar bar-cpu" style="height: 50px;"></div>
+                            <div class="bar bar-io" style="height: 45px;"></div>
+                        </div>
+                        <div class="bar-label">WebApp_Prod</div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-pair">
+                            <div class="bar bar-cpu" style="height: 35px;"></div>
+                            <div class="bar bar-io" style="height: 25px;"></div>
+                        </div>
+                        <div class="bar-label">Analytics_Job</div>
+                    </div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3b82f6;"></div>
+                        CPU (seconds)
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f59e0b;"></div>
+                        I/O (x10K)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Expensive Queries Section (Tab 2 Content) -->
+        <div class="section">
+            <h3>Top Expensive Queries</h3>
+            <p style="color: #6b7280; margin-bottom: 16px;">Queries with highest CPU and I/O cost</p>
+
+            <div class="query-item">
+                <div class="query-header">
+                    <span><strong>#1 - ETL_Service</strong> - Cost Score: 245.8</span>
+                    <span>&#9660;</span>
+                </div>
+                <div class="query-content">
+                    <div class="query-metrics">
+                        <div class="metric-card">
+                            <div class="metric-label">Executions</div>
+                            <div class="metric-value" style="font-size: 20px;">12,456</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Avg CPU (ms)</div>
+                            <div class="metric-value" style="font-size: 20px;">856.3</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Avg Elapsed (ms)</div>
+                            <div class="metric-value" style="font-size: 20px;">1,245.7</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Avg Reads</div>
+                            <div class="metric-value" style="font-size: 20px;">45,678</div>
+                        </div>
+                    </div>
+                    <strong>Query:</strong>
+                    <div class="code-block">
+SELECT c.customer_id, c.name, SUM(o.total_amount) as total_sales
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+WHERE o.order_date >= DATEADD(month, -3, GETDATE())
+GROUP BY c.customer_id, c.name
+ORDER BY total_sales DESC
+                    </div>
+                    <div class="warning-message" style="margin-top: 12px;">
+                        &#9888; Multiple execution plans detected: 3 plans
+                    </div>
+                </div>
+            </div>
+
+            <div class="query-item">
+                <div class="query-header">
+                    <span><strong>#2 - ReportServer</strong> - Cost Score: 178.4</span>
+                    <span>&#9654;</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Blocking Analysis Section (Tab 3 Content) -->
+        <div class="section">
+            <h3>Current Blocking Chains</h3>
+
+            <div class="warning-message" style="margin-bottom: 16px;">
+                &#9888; Found 2 blocking chains
+            </div>
+
+            <div class="blocking-item">
+                <div class="blocking-header">
+                    Session 52 blocking Session 78 (15.3s)
+                </div>
+                <div class="blocking-content">
+                    <div class="blocking-side">
+                        <h4>Blocker</h4>
+                        <p><strong>Program:</strong> ETL_Service</p>
+                        <p><strong>Host:</strong> etl-server-01</p>
+                        <div class="code-block" style="margin-top: 12px; font-size: 12px;">
+UPDATE products SET stock = stock - 10 WHERE product_id = 1234
+                        </div>
+                    </div>
+                    <div class="blocking-side">
+                        <h4>Blocked</h4>
+                        <p><strong>Program:</strong> WebApp_Prod</p>
+                        <p><strong>Host:</strong> web-prod-01</p>
+                        <p><strong>Wait Type:</strong> LCK_M_X</p>
+                        <p><strong>Resource:</strong> KEY: 7:72057594...</p>
+                        <div class="code-block" style="margin-top: 12px; font-size: 12px;">
+SELECT * FROM products WHERE product_id = 1234
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Redundancies Section (Tab 4 Content) -->
+        <div class="section">
+            <h3>Cross-System Redundancy Findings</h3>
+            <p style="color: #6b7280; margin-bottom: 16px;">Queries executed by multiple systems that could be consolidated</p>
+
+            <h4 style="margin-bottom: 12px;">High Severity</h4>
+            <div class="finding-item">
+                <div class="finding-header">
+                    <span><strong>Executions: 45,678</strong></span>
+                    <span class="severity-badge severity-high">High</span>
+                </div>
+                <p><strong>Systems involved:</strong> ETL_Service, ReportServer, Analytics_Job</p>
+                <p><strong>Potential savings:</strong> 67%</p>
+                <p><strong>Recommendation:</strong> Consider caching this query result or creating a materialized view</p>
+                <div class="code-block" style="margin-top: 12px; font-size: 12px;">
+SELECT product_id, product_name, category FROM products WHERE is_active = 1
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Recommendations Section (Tab 5 Content) -->
+        <div class="section">
+            <h3>Prioritized Recommendations</h3>
+
+            <h4 style="margin-bottom: 12px;">High Priority</h4>
+            <div class="recommendation-high">
+                ETL_Service is consuming 45% of total CPU resources. Consider optimizing ETL queries or scheduling during off-peak hours.
+            </div>
+            <div class="recommendation-high">
+                Query #1 has 3 different execution plans. Consider adding parameter hints or updating statistics.
+            </div>
+
+            <h4 style="margin: 20px 0 12px;">Medium Priority</h4>
+            <div class="recommendation-medium">
+                ReportServer has 24 idle connections. Consider implementing connection pooling or reducing max pool size.
+            </div>
+            <div class="recommendation-medium">
+                Cross-system query redundancy detected. 3 systems are executing the same product lookup query 45,678 times daily.
+            </div>
+
+            <h4 style="margin: 20px 0 12px;">Low Priority</h4>
+            <div class="recommendation-low">
+                Consider adding an index on orders.order_date for improved query performance on date-based filters.
+            </div>
+
+            <div class="divider"></div>
+
+            <button class="btn btn-outline">Export Recommendations</button>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparison Page Mockup - BI Data Compare</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1f2937;
+            font-size: 28px;
+        }
+        .header p {
+            color: #6b7280;
+            margin-top: 8px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #374151;
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+        .help-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-outline {
+            background: white;
+            border: 1px solid #d1d5db;
+            color: #374151;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+        .table-list {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .table-item {
+            padding: 10px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .table-item:last-child {
+            border-bottom: none;
+        }
+        .table-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        .table-item.fact {
+            background: #fef3c7;
+        }
+        .filter-row {
+            display: grid;
+            grid-template-columns: 2fr 2fr;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .caption {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+        .divider {
+            border-top: 1px solid #e5e7eb;
+            margin: 30px 0;
+        }
+        .incremental-section {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .metrics-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 16px;
+        }
+        .metric-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .progress-section {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            width: 65%;
+            border-radius: 4px;
+        }
+        .result-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .result-title {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-match {
+            color: #16a34a;
+        }
+        .status-diff {
+            color: #f59e0b;
+        }
+        .mockup-label {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .collapsible {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .collapsible-header {
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mockup-label">MOCKUP</div>
+
+    <div class="container">
+        <div class="header">
+            <h1>&#9878; Table Comparison</h1>
+            <p>Select tables and comparison options to analyze differences.</p>
+        </div>
+
+        <!-- Comparison Options Section -->
+        <div class="section">
+            <h2>Comparison Options</h2>
+            <div class="form-group">
+                <label>Schema Name</label>
+                <input type="text" value="dbo" />
+                <div class="help-text">Schema to compare (e.g., dbo)</div>
+            </div>
+            <button class="btn btn-outline">&#128269; Load Tables</button>
+        </div>
+
+        <!-- Table Selection Section -->
+        <div class="section">
+            <h2>Select Tables to Compare</h2>
+
+            <div class="filter-row">
+                <div class="form-group">
+                    <label>&#128269; Filter tables (regex)</label>
+                    <input type="text" placeholder="e.g., ^mrr_ or ^stg_" />
+                    <div class="help-text">Filter tables by regex pattern. Examples: ^mrr_, ^stg_, ^dwh_, .*_fact$</div>
+                </div>
+                <div class="form-group">
+                    <label>Quick filters</label>
+                    <select>
+                        <option>All</option>
+                        <option>mrr_*</option>
+                        <option>stg_*</option>
+                        <option>dwh_*</option>
+                        <option>dim_*</option>
+                        <option>fact_*</option>
+                        <option>link_*</option>
+                    </select>
+                    <div class="help-text">Select a preset filter</div>
+                </div>
+            </div>
+
+            <div class="checkbox-row">
+                <input type="checkbox" id="select-all" />
+                <label for="select-all">Select All Filtered (excludes fact/link tables)</label>
+            </div>
+
+            <div class="caption">Showing 24 of 45 tables</div>
+
+            <div class="table-list">
+                <div class="table-item">
+                    <input type="checkbox" checked />
+                    <span>dim_customer</span>
+                </div>
+                <div class="table-item">
+                    <input type="checkbox" checked />
+                    <span>dim_product</span>
+                </div>
+                <div class="table-item">
+                    <input type="checkbox" checked />
+                    <span>dim_date</span>
+                </div>
+                <div class="table-item">
+                    <input type="checkbox" />
+                    <span>stg_orders</span>
+                </div>
+                <div class="table-item">
+                    <input type="checkbox" />
+                    <span>mrr_inventory</span>
+                </div>
+                <div class="table-item fact">
+                    <input type="checkbox" />
+                    <span>fact_sales</span>
+                    <span style="color: #92400e; font-size: 12px;">(select alone)</span>
+                </div>
+                <div class="table-item fact">
+                    <input type="checkbox" />
+                    <span>fact_orders</span>
+                    <span style="color: #92400e; font-size: 12px;">(select alone)</span>
+                </div>
+            </div>
+
+            <div class="caption">Selected 3 tables (0 fact/link, 3 other)</div>
+        </div>
+
+        <!-- Incremental Comparison Section (for fact tables) -->
+        <div class="incremental-section">
+            <h2>&#128197; Incremental Comparison</h2>
+            <div class="checkbox-row">
+                <input type="checkbox" id="is-incremental" checked />
+                <label for="is-incremental">Is Incremental</label>
+            </div>
+            <div class="form-group">
+                <label>Select Date Column</label>
+                <select>
+                    <option>order_date</option>
+                    <option>created_at</option>
+                    <option>modified_date</option>
+                </select>
+            </div>
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <div class="metric-label">Source Max (order_date)</div>
+                    <div class="metric-value">2024-12-01</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Target Max (order_date)</div>
+                    <div class="metric-value">2024-11-30</div>
+                </div>
+            </div>
+            <div style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-top: 16px; color: #92400e;">
+                &#9888; Max dates differ! Comparison will filter BOTH source and target to: <code>order_date <= '2024-11-30'</code>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Column Validation Section -->
+        <div class="section">
+            <h2>Column Validation</h2>
+            <button class="btn btn-outline btn-full">&#128269; Check Column Differences</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Start Comparison Button -->
+        <button class="btn btn-primary btn-full" style="font-size: 18px; padding: 16px;">&#128640; Start Comparison</button>
+
+        <!-- Progress Section (shown during comparison) -->
+        <div class="progress-section">
+            <h2>Comparison Progress</h2>
+            <div class="caption">Run ID: <code>a1b2c3d4</code></div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="caption">Comparing table 13/20: dim_customer</div>
+
+            <!-- Result Items -->
+            <div class="result-item">
+                <div class="result-header">
+                    <span class="result-title status-match">&#9989; dim_date</span>
+                </div>
+                <div class="metrics-row" style="margin-top: 12px;">
+                    <div class="metric-card">
+                        <div class="metric-label">Source Rows</div>
+                        <div class="metric-value">3,650</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Target Rows</div>
+                        <div class="metric-value">3,650</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-item">
+                <div class="result-header">
+                    <span class="result-title status-diff">&#9888; dim_product</span>
+                </div>
+                <div class="metrics-row" style="margin-top: 12px;">
+                    <div class="metric-card">
+                        <div class="metric-label">Source Rows</div>
+                        <div class="metric-value">1,245</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Target Rows</div>
+                        <div class="metric-value">1,243</div>
+                    </div>
+                </div>
+                <div class="caption" style="margin-top: 8px;">Summary: 2 rows only in source</div>
+            </div>
+        </div>
+
+        <!-- Log Viewer Collapsible -->
+        <div class="collapsible">
+            <div class="collapsible-header">
+                &#128203; View Application Logs
+                <span style="margin-left: auto;">&#9660;</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
