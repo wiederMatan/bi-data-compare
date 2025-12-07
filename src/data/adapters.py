@@ -11,6 +11,7 @@ from sqlalchemy.pool import QueuePool
 from src.core.exceptions import ConnectionError, DatabaseError
 from src.core.logging import get_logger
 from src.data.models import AuthType, ConnectionInfo
+from src.utils.odbc_driver import get_odbc_driver_string
 
 logger = get_logger(__name__)
 
@@ -114,7 +115,7 @@ class SQLServerAdapter(DatabaseAdapter):
 
     def build_connection_string(self) -> str:
         """Build SQL Server connection string."""
-        driver = "{ODBC Driver 18 for SQL Server}"
+        driver = get_odbc_driver_string()
 
         if self.connection_info.auth_type == AuthType.WINDOWS:
             conn_str = (
