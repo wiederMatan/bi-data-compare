@@ -628,17 +628,8 @@ def display_result_summary(result, source_conn=None, target_conn=None) -> None:
             schema_name = parts[0] if len(parts) > 1 else "dbo"
             table_name = parts[-1]
 
-            if st.button(f"🔎 Open Drill-Down Details", key=f"drill_{result.source_table}"):
-                # Store drill-down data in session state
-                st.session_state.drill_down_data = {
-                    "table_name": table_name,
-                    "schema_name": schema_name,
-                    "source_conn_info": source_conn.connection_info,
-                    "target_conn_info": target_conn.connection_info,
-                    "source_row_count": result.source_row_count,
-                    "target_row_count": result.target_row_count,
-                }
-                st.info("✅ Data loaded! Click **Drill_Down** in the sidebar to view details.")
+            if st.button(f"🔎 View Full Drill-Down in Results", key=f"drill_{result.source_table}"):
+                st.info("✅ Go to **Results** page in the sidebar to view detailed drill-down analysis with column selection and row-by-row comparison.")
 
             st.markdown("**🔍 Data Comparison (EXCEPT):**")
 

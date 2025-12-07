@@ -24,6 +24,8 @@ from src.services.export import ExportService
 from src.services.sync_script import SyncScriptGenerator
 from src.utils.formatters import format_number, format_percentage
 from src.ui.styles import apply_professional_style, render_empty_state, render_status_badge
+from src.data.database import get_cached_connection
+from src.utils.validators import validate_sql_identifier, validate_date_value
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -220,28 +222,6 @@ def render_results_table(results: list) -> None:
             with col3:
                 st.metric("Match %", f"{result.get_match_percentage():.1f}%")
 
-            # Drill-down button for different tables
-            if not result.is_match():
-                parts = result.source_table.split(".")
-                schema_name = parts[0] if len(parts) > 1 else "dbo"
-                table_name = parts[-1]
-
-                # Get connection info from session state
-                source_conn_info = st.session_state.get("source_connection")
-                target_conn_info = st.session_state.get("target_connection")
-
-                if source_conn_info and target_conn_info:
-                    if st.button(f"🔎 View Data Differences", key=f"drill_result_{result.source_table}", type="primary"):
-                        st.session_state.drill_down_data = {
-                            "table_name": table_name,
-                            "schema_name": schema_name,
-                            "source_conn_info": source_conn_info,
-                            "target_conn_info": target_conn_info,
-                            "source_row_count": result.source_row_count,
-                            "target_row_count": result.target_row_count,
-                        }
-                        st.info("✅ Data loaded! Click **Drill_Down** in the sidebar to view details.")
-
             # Row differences
             if result.source_only_rows > 0 or result.target_only_rows > 0:
                 col1, col2 = st.columns(2)
@@ -282,6 +262,228 @@ def render_results_table(results: list) -> None:
                     ]
                 )
                 st.dataframe(data_df, use_container_width=True)
+
+            # Inline Drill-Down for non-failed tables
+            if result.status != "failed":
+                render_inline_drill_down(result)
+            else:
+                # Show error message for failed tables
+                if result.error_message:
+                    st.error(f"Comparison failed: {result.error_message}")
+
+
+def render_inline_drill_down(result) -> None:
+    """Render inline drill-down analysis for a table."""
+    parts = result.source_table.split(".")
+    schema_name = parts[0] if len(parts) > 1 else "dbo"
+    table_name = parts[-1]
+
+    # Get connection info from session state
+    source_conn_info = st.session_state.get("source_connection")
+    target_conn_info = st.session_state.get("target_connection")
+
+    if not source_conn_info or not target_conn_info:
+        st.warning("Connection information not available. Please re-run the comparison.")
+        return
+
+    # Create a unique key for this table's drill-down state
+    drill_key = f"drill_expanded_{result.source_table}"
+
+    st.markdown("---")
+
+    # Button to load/toggle drill-down data
+    button_label = "🔍 View Data Differences" if result.is_match() else "🔍 View Data Differences"
+    if result.is_match():
+        button_label = "🔍 Verify Data (Sample)"
+
+    if st.button(button_label, key=f"drill_btn_{result.source_table}", type="primary"):
+        # Toggle the drill-down state
+        st.session_state[drill_key] = not st.session_state.get(drill_key, False)
+        st.rerun()
+
+    # Show drill-down content if expanded
+    if st.session_state.get(drill_key, False):
+        try:
+            # Use cached connections
+            source_conn = get_cached_connection(source_conn_info)
+            target_conn = get_cached_connection(target_conn_info)
+
+            # Validate schema and table names to prevent SQL injection
+            try:
+                validate_sql_identifier(schema_name, "schema_name")
+                validate_sql_identifier(table_name, "table_name")
+            except Exception as e:
+                st.error(f"Invalid identifier: {e}")
+                return
+
+            # Check if incremental comparison filter should be applied
+            date_filter = ""
+            inc_config = st.session_state.get("incremental_config")
+            if inc_config and inc_config.get("table") == table_name:
+                date_col = inc_config.get("date_column")
+                min_max_date = inc_config.get("min_max_date")
+
+                if date_col and min_max_date:
+                    try:
+                        validate_sql_identifier(date_col, "date_column")
+                        validate_date_value(str(min_max_date), "min_max_date")
+                        date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
+                        st.info(f"📅 **Incremental filter active:** Comparing only rows where `{date_col} <= '{min_max_date}'`")
+                    except Exception as e:
+                        st.error(f"Invalid identifier or date value: {e}")
+                        date_filter = ""
+
+            # Fetch data with filter applied to both sides
+            query = f"SELECT TOP 1000 * FROM [{schema_name}].[{table_name}]{date_filter}"
+
+            with st.spinner("Loading data from databases..."):
+                source_rows = source_conn.execute_query(query)
+                target_rows = target_conn.execute_query(query)
+
+            df_source = pd.DataFrame(source_rows) if source_rows else pd.DataFrame()
+            df_target = pd.DataFrame(target_rows) if target_rows else pd.DataFrame()
+
+            if df_source.empty and df_target.empty:
+                st.info("Both source and target tables are empty.")
+                return
+
+            # Get comparable columns
+            if not df_source.empty and not df_target.empty:
+                common_cols = [c for c in df_source.columns if c in df_target.columns]
+                all_compare_cols = [c for c in common_cols if df_source[c].dtype != 'datetime64[ns]'
+                               and 'date' not in c.lower() and 'time' not in c.lower() and 'created' not in c.lower()]
+
+                if all_compare_cols:
+                    # Column selection
+                    st.subheader("⚙️ Column Selection")
+                    st.caption("Select columns to include in comparison. Datetime columns are excluded by default.")
+
+                    selected_cols = st.multiselect(
+                        "Columns to Compare",
+                        options=all_compare_cols,
+                        default=all_compare_cols,
+                        key=f"drill_cols_{result.source_table}",
+                        help="Deselect columns to exclude them from the EXCEPT and row-by-row comparisons"
+                    )
+
+                    if not selected_cols:
+                        st.warning("Please select at least one column to compare.")
+                        return
+
+                    compare_cols = selected_cols
+
+                    # EXCEPT comparison
+                    st.subheader("📊 EXCEPT Comparison")
+
+                    source_set = set(df_source[compare_cols].apply(tuple, axis=1))
+                    target_set = set(df_target[compare_cols].apply(tuple, axis=1))
+
+                    source_only = source_set - target_set
+                    target_only = target_set - source_set
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.markdown(f"**Source EXCEPT Target ({len(source_only)} rows)**")
+                        if source_only:
+                            source_only_data = [dict(zip(compare_cols, row)) for row in source_only]
+                            df_source_only = pd.DataFrame(source_only_data)
+                            st.dataframe(df_source_only, use_container_width=True, height=300)
+                        else:
+                            st.success("✅ All source rows exist in target")
+
+                    with col2:
+                        st.markdown(f"**Target EXCEPT Source ({len(target_only)} rows)**")
+                        if target_only:
+                            target_only_data = [dict(zip(compare_cols, row)) for row in target_only]
+                            df_target_only = pd.DataFrame(target_only_data)
+                            st.dataframe(df_target_only, use_container_width=True, height=300)
+                        else:
+                            st.success("✅ All target rows exist in source")
+
+                    # Row-by-row comparison
+                    st.subheader("🔍 Row-by-Row Value Differences")
+
+                    key_col = compare_cols[0] if compare_cols else None
+
+                    if len(compare_cols) < 2:
+                        st.info("Select at least 2 columns to enable row-by-row comparison. The first column is used as the key to match rows.")
+                    elif key_col:
+                        st.caption(f"Using **{key_col}** as the key column to match rows between source and target.")
+
+                        df_merged = pd.merge(
+                            df_source[compare_cols],
+                            df_target[compare_cols],
+                            on=key_col,
+                            how='inner',
+                            suffixes=('_source', '_target')
+                        )
+
+                        if not df_merged.empty:
+                            diff_rows_list = []
+                            for _, row in df_merged.iterrows():
+                                row_diff = {'key': row[key_col], 'differences': []}
+                                for col in compare_cols[1:]:
+                                    src_val = row.get(f'{col}_source')
+                                    tgt_val = row.get(f'{col}_target')
+                                    if src_val != tgt_val:
+                                        row_diff['differences'].append({
+                                            'column': col,
+                                            'source': src_val,
+                                            'target': tgt_val
+                                        })
+                                if row_diff['differences']:
+                                    diff_rows_list.append(row_diff)
+
+                            if diff_rows_list:
+                                st.warning(f"Found {len(diff_rows_list)} rows with value differences")
+
+                                # Create a summary table
+                                all_diffs = []
+                                for diff_row in diff_rows_list:
+                                    for d in diff_row['differences']:
+                                        all_diffs.append({
+                                            'Key': diff_row['key'],
+                                            'Column': d['column'],
+                                            'Source Value': str(d['source']),
+                                            'Target Value': str(d['target']),
+                                        })
+
+                                if all_diffs:
+                                    df_diffs = pd.DataFrame(all_diffs)
+
+                                    # Highlight function
+                                    def highlight_diff(row):
+                                        return ['background-color: #ffcccc' if row['Source Value'] != row['Target Value'] else '' for _ in row]
+
+                                    st.dataframe(
+                                        df_diffs.style.apply(highlight_diff, axis=1),
+                                        use_container_width=True,
+                                        height=300
+                                    )
+                            else:
+                                st.success("✅ No value differences in matching rows")
+                        else:
+                            st.markdown(render_empty_state(
+                                "🔗",
+                                "No Matching Keys",
+                                f"No rows with matching '{key_col}' values found between source and target."
+                            ), unsafe_allow_html=True)
+                else:
+                    st.info("No comparable columns found (all columns are datetime-related).")
+            elif df_source.empty:
+                st.warning("Source table is empty.")
+                if not df_target.empty:
+                    st.markdown(f"**Target has {len(df_target)} rows (sample):**")
+                    st.dataframe(df_target.head(100), use_container_width=True)
+            else:
+                st.warning("Target table is empty.")
+                st.markdown(f"**Source has {len(df_source)} rows (sample):**")
+                st.dataframe(df_source.head(100), use_container_width=True)
+
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+            logger.error(f"Inline drill-down error for {result.source_table}: {e}", exc_info=True)
 
 
 def render_export_options(results: list) -> None:
