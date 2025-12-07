@@ -11,6 +11,7 @@ from sqlalchemy import text
 from src.core.exceptions import ConnectionError, DatabaseError
 from src.core.logging import get_logger
 from src.data.models import ConnectionInfo, AuthType
+from src.utils.odbc_driver import get_odbc_driver_string
 
 logger = get_logger(__name__)
 
@@ -169,7 +170,7 @@ class AsyncDatabaseConnection:
 
     def _build_connection_string(self) -> str:
         """Build ODBC connection string."""
-        driver = "{ODBC Driver 18 for SQL Server}"
+        driver = get_odbc_driver_string()
         parts = [
             f"DRIVER={driver}",
             f"SERVER={self.connection_info.server}",

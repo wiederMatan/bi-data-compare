@@ -10,6 +10,7 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.core.exceptions import ConfigurationError
+from src.utils.odbc_driver import get_odbc_driver_string
 
 
 class DatabaseConfig(BaseSettings):
@@ -280,7 +281,7 @@ class Settings(BaseSettings):
                 "Source database name is required", config_key="source_database"
             )
 
-        driver = "{ODBC Driver 18 for SQL Server}"
+        driver = get_odbc_driver_string()
 
         if self.source_use_windows_auth:
             return (
@@ -320,7 +321,7 @@ class Settings(BaseSettings):
                 "Target database name is required", config_key="target_database"
             )
 
-        driver = "{ODBC Driver 18 for SQL Server}"
+        driver = get_odbc_driver_string()
 
         if self.target_use_windows_auth:
             return (
