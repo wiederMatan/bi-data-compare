@@ -103,11 +103,11 @@ class ComparisonService:
 
         # Get tables from both databases
         source_tables = {
-            t.table_name: t
+            t.table_name.upper(): t
             for t in self.source_metadata.get_tables(source_schema)
         }
         target_tables = {
-            t.table_name: t
+            t.table_name.upper(): t
             for t in self.target_metadata.get_tables(target_schema)
         }
 
@@ -176,13 +176,13 @@ class ComparisonService:
 
         # Get columns (cached to avoid duplicate queries)
         source_cols = {
-            c.column_name: c
+            c.column_name.upper(): c
             for c in self._get_cached_columns(
                 self.source_metadata, source_schema, table_name, "source"
             )
         }
         target_cols = {
-            c.column_name: c
+            c.column_name.upper(): c
             for c in self._get_cached_columns(
                 self.target_metadata, target_schema, table_name, "target"
             )
@@ -329,20 +329,20 @@ class ComparisonService:
             target_schema: Target schema name
             target_table: Target table name
         """
-        # Get common columns for checksum (using cached columns)
+        # Get common columns for checksum (using cached columns) - case insensitive
         source_cols = {
-            c.column_name
+            c.column_name.upper(): c.column_name
             for c in self._get_cached_columns(
                 self.source_metadata, source_schema, source_table, "source"
             )
         }
         target_cols = {
-            c.column_name
+            c.column_name.upper(): c.column_name
             for c in self._get_cached_columns(
                 self.target_metadata, target_schema, target_table, "target"
             )
         }
-        common_cols = list(source_cols & target_cols)
+        common_cols = [source_cols[k] for k in source_cols.keys() & target_cols.keys()]
 
         if not common_cols:
             logger.warning("No common columns for checksum comparison")
@@ -411,20 +411,20 @@ class ComparisonService:
         total_rows = max(result.source_row_count, result.target_row_count)
         processed_rows = 0
 
-        # Get common columns (using cached columns)
+        # Get common columns (using cached columns) - case insensitive
         source_cols = {
-            c.column_name
+            c.column_name.upper(): c.column_name
             for c in self._get_cached_columns(
                 self.source_metadata, source_schema, source_table, "source"
             )
         }
         target_cols = {
-            c.column_name
+            c.column_name.upper(): c.column_name
             for c in self._get_cached_columns(
                 self.target_metadata, target_schema, target_table, "target"
             )
         }
-        common_cols = list(source_cols & target_cols)
+        common_cols = [source_cols[k] for k in source_cols.keys() & target_cols.keys()]
 
         # Compare in chunks
         for source_chunk in self.source_data.get_data_chunked(
