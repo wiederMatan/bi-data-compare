@@ -409,18 +409,21 @@ def load_tables(source_conn_info, target_conn_info, schema_name: str) -> None:
             target_conn = get_cached_connection(target_conn_info)
             target_repo = MetadataRepository(target_conn)
 
-            # Get tables
-            source_tables = {t.table_name for t in source_repo.get_tables(schema_name)}
-            target_tables = {t.table_name for t in target_repo.get_tables(schema_name)}
+            # Get tables (use uppercase keys for case-insensitive comparison)
+            source_tables_map = {t.table_name.upper(): t.table_name for t in source_repo.get_tables(schema_name)}
+            target_tables_map = {t.table_name.upper(): t.table_name for t in target_repo.get_tables(schema_name)}
 
-            # Get common tables
-            common_tables = sorted(list(source_tables & target_tables))
+            # Get common tables (case insensitive) - use source table names
+            common_keys = set(source_tables_map.keys()) & set(target_tables_map.keys())
+            common_tables = sorted([source_tables_map[k] for k in common_keys])
 
             # Don't disconnect - keep connections cached
 
             # Show tables only in source or target
-            source_only = sorted(list(source_tables - target_tables))
-            target_only = sorted(list(target_tables - source_tables))
+            source_only_keys = set(source_tables_map.keys()) - set(target_tables_map.keys())
+            target_only_keys = set(target_tables_map.keys()) - set(source_tables_map.keys())
+            source_only = sorted([source_tables_map[k] for k in source_only_keys])
+            target_only = sorted([target_tables_map[k] for k in target_only_keys])
 
             if common_tables:
                 st.session_state.available_tables = common_tables
