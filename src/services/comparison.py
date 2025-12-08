@@ -111,13 +111,14 @@ class ComparisonService:
             for t in self.target_metadata.get_tables(target_schema)
         }
 
-        # Filter tables if specified
+        # Filter tables if specified (case insensitive)
         if table_filter:
+            table_filter_upper = {t.upper() for t in table_filter}
             source_tables = {
-                k: v for k, v in source_tables.items() if k in table_filter
+                k: v for k, v in source_tables.items() if k in table_filter_upper
             }
             target_tables = {
-                k: v for k, v in target_tables.items() if k in table_filter
+                k: v for k, v in target_tables.items() if k in table_filter_upper
             }
 
         # Find tables only in source
