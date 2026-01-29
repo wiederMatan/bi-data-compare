@@ -1,0 +1,138 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # General checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+        name: Check YAML syntax
+      - id: check-json
+        name: Check JSON syntax
+      - id: check-toml
+        name: Check TOML syntax
+      - id: end-of-file-fixer
+        name: Fix end of files
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+      - id: check-case-conflict
+        name: Check case conflicts
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+        name: Check for large files
+
+  # Security: Detect secrets and credentials
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        name: Detect secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+
+  # Security: Check for common security issues
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.7
+    hooks:
+      - id: bandit
+        name: Bandit security linter
+        args: ['-c', 'pyproject.toml', '-r', 'src/']
+        additional_dependencies: ['bandit[toml]']
+
+  # Python code formatting
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        name: Black code formatter
+        language_version: python3
+
+  # Python import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort import sorter
+
+  # Python linting
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        name: Flake8 linter
+        additional_dependencies:
+          - flake8-bugbear
+          - flake8-comprehensions
+          - flake8-simplify
+
+  # Python type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        name: MyPy type checker
+        args: ['--ignore-missing-imports']
+        additional_dependencies:
+          - types-PyYAML
+          - types-requests
+
+  # Check for hardcoded passwords and secrets
+  - repo: local
+    hooks:
+      - id: no-hardcoded-secrets
+        name: Check for hardcoded secrets
+        entry: python -c "
+import sys
+import re
+patterns = [
+    r'password\s*=\s*[\"\\'][^\"\\'\$]+[\"\\']',
+    r'secret\s*=\s*[\"\\'][^\"\\'\$]+[\"\\']',
+    r'api_key\s*=\s*[\"\\'][^\"\\'\$]+[\"\\']',
+    r'AWS_SECRET|AZURE_SECRET|GCP_SECRET',
+]
+files = sys.argv[1:]
+found = False
+for f in files:
+    try:
+        with open(f, 'r') as file:
+            content = file.read()
+            for p in patterns:
+                matches = re.findall(p, content, re.IGNORECASE)
+                if matches:
+                    print(f'Potential secret in {f}: {matches}')
+                    found = True
+    except: pass
+sys.exit(1 if found else 0)
+"
+        language: python
+        files: \.(py|yaml|yml|json|toml|env)$
+        exclude: (\.env\.example|test_|_test\.py|conftest\.py)
+
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        name: Hadolint Dockerfile linter
+
+# Configuration for specific hooks
+default_language_version:
+  python: python3.11
+
+# Files to exclude from all hooks
+exclude: |
+  (?x)^(
+    \.git/|
+    \.venv/|
+    venv/|
+    __pycache__/|
+    \.pytest_cache/|
+    \.mypy_cache/|
+    node_modules/|
+    build/|
+    dist/
+  )

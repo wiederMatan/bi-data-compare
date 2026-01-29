@@ -1,0 +1,28 @@
+# CODEOWNERS - Define code ownership for pull request reviews
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @wiederMatan
+
+# Security-sensitive files require explicit review
+SECURITY.md @wiederMatan
+.github/ @wiederMatan
+docker-compose.yml @wiederMatan
+Dockerfile @wiederMatan
+.env.example @wiederMatan
+
+# Core security modules
+src/services/auth.py @wiederMatan
+src/utils/security.py @wiederMatan
+src/utils/validators.py @wiederMatan
+src/api/routes/auth.py @wiederMatan
+
+# Database connection and query handling (SQL injection prevention)
+src/data/database.py @wiederMatan
+src/data/async_database.py @wiederMatan
+src/data/repositories.py @wiederMatan
+src/data/adapters.py @wiederMatan
+
+# Configuration files
+src/core/config.py @wiederMatan
+config/ @wiederMatan
