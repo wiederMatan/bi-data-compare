@@ -1,5 +1,7 @@
 """FastAPI application for BI Data Compare."""
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,13 +22,33 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
-    # CORS middleware
+    # CORS middleware - configure allowed origins from environment
+    # SECURITY: Do not use allow_origins=["*"] with allow_credentials=True in production
+    cors_origins_env = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+    if cors_origins_env:
+        # Parse comma-separated list of origins from environment
+        allowed_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+    else:
+        # Default to localhost for development
+        allowed_origins = [
+            "http://localhost:8501",
+            "http://localhost:8502",
+            "http://localhost:8503",
+            "http://127.0.0.1:8501",
+            "http://127.0.0.1:8502",
+            "http://127.0.0.1:8503",
+        ]
+        logger.warning(
+            "CORS_ALLOWED_ORIGINS not set. Using default localhost origins. "
+            "Set CORS_ALLOWED_ORIGINS environment variable for production."
+        )
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allowed_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-API-Key"],
     )
 
     # Include routers

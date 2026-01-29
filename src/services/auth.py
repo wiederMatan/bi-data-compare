@@ -1,6 +1,7 @@
 """User authentication service."""
 
 import hashlib
+import os
 import secrets
 import sqlite3
 import threading
@@ -14,9 +15,21 @@ from src.core.logging import get_logger
 logger = get_logger(__name__)
 
 # JWT configuration
-JWT_SECRET_KEY = secrets.token_hex(32)
+# SECURITY: Load secret key from environment variable for persistence across restarts
+# If not set, generate a random key (suitable for development only)
+_env_jwt_secret = os.environ.get("JWT_SECRET_KEY")
+if _env_jwt_secret:
+    JWT_SECRET_KEY = _env_jwt_secret
+else:
+    JWT_SECRET_KEY = secrets.token_hex(32)
+    logger.warning(
+        "JWT_SECRET_KEY not set in environment. Using generated key. "
+        "This will invalidate tokens on restart. "
+        "Set JWT_SECRET_KEY environment variable for production."
+    )
+
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 24
+JWT_EXPIRATION_HOURS = int(os.environ.get("JWT_EXPIRATION_HOURS", "24"))
 
 
 class User:

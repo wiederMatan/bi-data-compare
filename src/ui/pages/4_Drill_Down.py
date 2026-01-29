@@ -69,7 +69,8 @@ def render() -> None:
                 return
 
             # Check if incremental comparison filter should be applied
-            date_filter = ""
+            date_filter_clause = ""
+            date_filter_params = None
             inc_config = st.session_state.get("incremental_config")
             if inc_config and inc_config.get("table") == table_name:
                 date_col = inc_config.get("date_column")
@@ -80,16 +81,19 @@ def render() -> None:
                     try:
                         validate_sql_identifier(date_col, "date_column")
                         validate_date_value(str(min_max_date), "min_max_date")
-                        date_filter = f" WHERE [{date_col}] <= '{min_max_date}'"
+                        # SECURITY: Use parameterized query for date value
+                        date_filter_clause = f" WHERE [{date_col}] <= ?"
+                        date_filter_params = (str(min_max_date),)
                         st.info(f"📅 **Incremental filter active:** Comparing only rows where `{date_col} <= '{min_max_date}'` (applied to BOTH source and target)")
                     except Exception as e:
                         st.error(f"Invalid identifier or date value: {e}")
-                        date_filter = ""
+                        date_filter_clause = ""
+                        date_filter_params = None
 
-            # Fetch data with filter applied to both sides
-            query = f"SELECT TOP 1000 * FROM [{schema_name}].[{table_name}]{date_filter}"
-            source_rows = source_conn.execute_query(query)
-            target_rows = target_conn.execute_query(query)
+            # Fetch data with filter applied to both sides using parameterized query
+            query = f"SELECT TOP 1000 * FROM [{schema_name}].[{table_name}]{date_filter_clause}"
+            source_rows = source_conn.execute_query(query, date_filter_params)
+            target_rows = target_conn.execute_query(query, date_filter_params)
 
             df_source = pd.DataFrame(source_rows) if source_rows else pd.DataFrame()
             df_target = pd.DataFrame(target_rows) if target_rows else pd.DataFrame()
