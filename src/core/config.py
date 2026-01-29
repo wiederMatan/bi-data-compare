@@ -167,6 +167,11 @@ class Settings(BaseSettings):
         default=False, alias="TARGET_USE_WINDOWS_AUTH"
     )
 
+    # Database SSL Configuration
+    db_trust_server_certificate: bool = Field(
+        default=True, alias="DB_TRUST_SERVER_CERTIFICATE"
+    )
+
     # Performance
     max_workers: int = Field(default=4, ge=1, le=16, alias="MAX_WORKERS")
     chunk_size: int = Field(default=10000, ge=100, le=1000000, alias="CHUNK_SIZE")
@@ -283,13 +288,15 @@ class Settings(BaseSettings):
 
         driver = get_odbc_driver_string()
 
+        trust_cert = "yes" if self.db_trust_server_certificate else "no"
+
         if self.source_use_windows_auth:
             return (
                 f"DRIVER={driver};"
                 f"SERVER={self.source_server};"
                 f"DATABASE={self.source_database};"
                 f"Trusted_Connection=yes;"
-                f"TrustServerCertificate=yes;"
+                f"TrustServerCertificate={trust_cert};"
             )
         else:
             if not self.source_username or not self.source_password:
@@ -303,7 +310,7 @@ class Settings(BaseSettings):
                 f"DATABASE={self.source_database};"
                 f"UID={self.source_username};"
                 f"PWD={self.source_password};"
-                f"TrustServerCertificate=yes;"
+                f"TrustServerCertificate={trust_cert};"
             )
 
     def get_target_connection_string(self) -> str:
@@ -323,13 +330,15 @@ class Settings(BaseSettings):
 
         driver = get_odbc_driver_string()
 
+        trust_cert = "yes" if self.db_trust_server_certificate else "no"
+
         if self.target_use_windows_auth:
             return (
                 f"DRIVER={driver};"
                 f"SERVER={self.target_server};"
                 f"DATABASE={self.target_database};"
                 f"Trusted_Connection=yes;"
-                f"TrustServerCertificate=yes;"
+                f"TrustServerCertificate={trust_cert};"
             )
         else:
             if not self.target_username or not self.target_password:
@@ -343,7 +352,7 @@ class Settings(BaseSettings):
                 f"DATABASE={self.target_database};"
                 f"UID={self.target_username};"
                 f"PWD={self.target_password};"
-                f"TrustServerCertificate=yes;"
+                f"TrustServerCertificate={trust_cert};"
             )
 
 

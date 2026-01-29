@@ -6,6 +6,10 @@ SQL Server database comparison tool built with Python and Streamlit. Compare tab
 
 ### Run with Docker (Recommended)
 ```bash
+# Set required environment variable
+export SA_PASSWORD='YourSecureP@ssw0rd!'
+
+# Start the containers
 docker compose up -d --build
 ```
 Open http://localhost:8503
@@ -75,9 +79,15 @@ The `docker-compose.yml` includes:
 - **sqlserver-qa**: SQL Server on port 1433
 - **sqlserver-dev**: SQL Server on port 1434
 
-Default credentials:
-- Username: `sa`
-- Password: `YourStrong@Passw0rd`
+**IMPORTANT**: Set the `SA_PASSWORD` environment variable before running:
+```bash
+export SA_PASSWORD='YourSecureP@ssw0rd!'
+docker compose up -d --build
+```
+
+The password must meet SQL Server complexity requirements:
+- At least 8 characters
+- Contains uppercase, lowercase, numbers, and special characters
 
 ## Project Structure
 

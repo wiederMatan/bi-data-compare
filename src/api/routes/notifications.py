@@ -2,10 +2,12 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from src.api.routes.auth import get_current_user
 from src.core.logging import get_logger
+from src.services.auth import User
 from src.services.notifications import get_notification_service
 from src.services.persistence import get_persistence_service
 
@@ -51,11 +53,15 @@ class SendAlertRequest(BaseModel):
 
 
 @router.post("/configure")
-async def configure_email(request: EmailConfigRequest):
+async def configure_email(
+    request: EmailConfigRequest,
+    current_user: User = Depends(get_current_user),
+):
     """
     Configure email notification settings.
 
     Sets up SMTP server connection for sending notifications.
+    Requires authentication.
     """
     try:
         service = get_notification_service()
@@ -80,11 +86,14 @@ async def configure_email(request: EmailConfigRequest):
 
 
 @router.get("/status")
-async def get_notification_status():
+async def get_notification_status(
+    current_user: User = Depends(get_current_user),
+):
     """
     Get notification service status.
 
     Returns whether email notifications are configured and enabled.
+    Requires authentication.
     """
     service = get_notification_service()
     return {
@@ -94,11 +103,15 @@ async def get_notification_status():
 
 
 @router.post("/send")
-async def send_email(request: SendEmailRequest):
+async def send_email(
+    request: SendEmailRequest,
+    current_user: User = Depends(get_current_user),
+):
     """
     Send a custom email.
 
     Sends email to specified recipients with custom content.
+    Requires authentication.
     """
     try:
         service = get_notification_service()
@@ -129,11 +142,15 @@ async def send_email(request: SendEmailRequest):
 
 
 @router.post("/send-report")
-async def send_report(request: SendReportRequest):
+async def send_report(
+    request: SendReportRequest,
+    current_user: User = Depends(get_current_user),
+):
     """
     Send comparison report email.
 
     Sends formatted report for a completed comparison run.
+    Requires authentication.
     """
     try:
         service = get_notification_service()
@@ -196,11 +213,15 @@ async def send_report(request: SendReportRequest):
 
 
 @router.post("/send-alert")
-async def send_alert(request: SendAlertRequest):
+async def send_alert(
+    request: SendAlertRequest,
+    current_user: User = Depends(get_current_user),
+):
     """
     Send an alert notification.
 
     Sends alert email for errors, warnings, or information.
+    Requires authentication.
     """
     try:
         service = get_notification_service()
@@ -241,11 +262,15 @@ async def send_alert(request: SendAlertRequest):
 
 
 @router.post("/test")
-async def test_email(to: str):
+async def test_email(
+    to: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Send a test email.
 
     Verifies email configuration by sending a test message.
+    Requires authentication.
     """
     try:
         service = get_notification_service()

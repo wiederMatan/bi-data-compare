@@ -2,10 +2,12 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from src.api.routes.auth import get_current_user
 from src.core.logging import get_logger
+from src.services.auth import User
 from src.services.scheduler import get_scheduler_service
 
 logger = get_logger(__name__)
@@ -58,11 +60,15 @@ class JobResponse(BaseModel):
 
 
 @router.post("/jobs", response_model=JobResponse)
-async def create_job(request: CreateJobRequest):
+async def create_job(
+    request: CreateJobRequest,
+    current_user: User = Depends(get_current_user),
+):
     """
     Create a scheduled comparison job.
 
     Sets up recurring database comparison on a schedule.
+    Requires authentication.
     """
     try:
         scheduler = get_scheduler_service()
@@ -114,11 +120,14 @@ async def create_job(request: CreateJobRequest):
 
 
 @router.get("/jobs")
-async def list_jobs():
+async def list_jobs(
+    current_user: User = Depends(get_current_user),
+):
     """
     List all scheduled jobs.
 
     Returns all configured scheduled comparison jobs.
+    Requires authentication.
     """
     try:
         scheduler = get_scheduler_service()
@@ -135,11 +144,15 @@ async def list_jobs():
 
 
 @router.get("/jobs/{job_id}")
-async def get_job(job_id: str):
+async def get_job(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Get details of a scheduled job.
 
     Returns job configuration and status.
+    Requires authentication.
     """
     try:
         scheduler = get_scheduler_service()
@@ -158,11 +171,15 @@ async def get_job(job_id: str):
 
 
 @router.delete("/jobs/{job_id}")
-async def delete_job(job_id: str):
+async def delete_job(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Delete a scheduled job.
 
     Removes job from scheduler.
+    Requires authentication.
     """
     try:
         scheduler = get_scheduler_service()
@@ -181,11 +198,15 @@ async def delete_job(job_id: str):
 
 
 @router.post("/jobs/{job_id}/pause")
-async def pause_job(job_id: str):
+async def pause_job(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Pause a scheduled job.
 
     Job will not run until resumed.
+    Requires authentication.
     """
     try:
         scheduler = get_scheduler_service()
@@ -204,11 +225,15 @@ async def pause_job(job_id: str):
 
 
 @router.post("/jobs/{job_id}/resume")
-async def resume_job(job_id: str):
+async def resume_job(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Resume a paused job.
 
     Resumes scheduled execution.
+    Requires authentication.
     """
     try:
         scheduler = get_scheduler_service()
@@ -227,11 +252,15 @@ async def resume_job(job_id: str):
 
 
 @router.post("/jobs/{job_id}/run")
-async def run_job_now(job_id: str):
+async def run_job_now(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Trigger immediate job execution.
 
     Runs the job now regardless of schedule.
+    Requires authentication.
     """
     try:
         scheduler = get_scheduler_service()
@@ -250,8 +279,10 @@ async def run_job_now(job_id: str):
 
 
 @router.post("/start")
-async def start_scheduler():
-    """Start the scheduler service."""
+async def start_scheduler(
+    current_user: User = Depends(get_current_user),
+):
+    """Start the scheduler service. Requires authentication."""
     try:
         scheduler = get_scheduler_service()
         scheduler.start()
@@ -261,8 +292,10 @@ async def start_scheduler():
 
 
 @router.post("/stop")
-async def stop_scheduler():
-    """Stop the scheduler service."""
+async def stop_scheduler(
+    current_user: User = Depends(get_current_user),
+):
+    """Stop the scheduler service. Requires authentication."""
     try:
         scheduler = get_scheduler_service()
         scheduler.stop()

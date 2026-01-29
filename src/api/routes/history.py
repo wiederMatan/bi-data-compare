@@ -2,10 +2,12 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
+from src.api.routes.auth import get_current_user
 from src.core.logging import get_logger
+from src.services.auth import User
 from src.services.persistence import get_persistence_service
 
 logger = get_logger(__name__)
@@ -55,11 +57,13 @@ async def get_runs(
     limit: int = Query(50, ge=1, le=100, description="Number of runs to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     status: Optional[str] = Query(None, description="Filter by status"),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get list of comparison runs.
 
     Returns paginated list of all comparison runs.
+    Requires authentication.
     """
     try:
         persistence = get_persistence_service()
@@ -78,11 +82,15 @@ async def get_runs(
 
 
 @router.get("/runs/{run_id}")
-async def get_run(run_id: str):
+async def get_run(
+    run_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Get details of a specific run.
 
     Returns run metadata and all comparison results.
+    Requires authentication.
     """
     try:
         persistence = get_persistence_service()
@@ -107,11 +115,15 @@ async def get_run(run_id: str):
 
 
 @router.delete("/runs/{run_id}")
-async def delete_run(run_id: str):
+async def delete_run(
+    run_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Delete a comparison run.
 
     Removes run and all associated results from history.
+    Requires authentication.
     """
     try:
         persistence = get_persistence_service()
@@ -130,11 +142,14 @@ async def delete_run(run_id: str):
 
 
 @router.get("/statistics", response_model=StatisticsResponse)
-async def get_statistics():
+async def get_statistics(
+    current_user: User = Depends(get_current_user),
+):
     """
     Get overall statistics.
 
     Returns aggregate statistics across all comparison runs.
+    Requires authentication.
     """
     try:
         persistence = get_persistence_service()
@@ -148,11 +163,15 @@ async def get_statistics():
 
 
 @router.post("/cleanup")
-async def cleanup_old_runs(days: int = Query(30, ge=1, le=365, description="Days to keep")):
+async def cleanup_old_runs(
+    days: int = Query(30, ge=1, le=365, description="Days to keep"),
+    current_user: User = Depends(get_current_user),
+):
     """
     Clean up old comparison runs.
 
     Deletes runs older than specified number of days.
+    Requires authentication.
     """
     try:
         persistence = get_persistence_service()
