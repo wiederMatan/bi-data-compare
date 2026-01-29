@@ -2,13 +2,15 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from src.api.routes.auth import get_current_user
 from src.core.logging import get_logger
 from src.data.database import DatabaseConnection, get_cached_connection
 from src.data.models import AuthType, ConnectionInfo
 from src.data.repositories import MetadataRepository
+from src.services.auth import User
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -43,11 +45,15 @@ class TablesResponse(BaseModel):
 
 
 @router.post("/test", response_model=ConnectionResponse)
-async def test_connection(request: ConnectionRequest):
+async def test_connection(
+    request: ConnectionRequest,
+    current_user: User = Depends(get_current_user),
+):
     """
     Test database connection.
 
     Tests if a connection can be established with the provided credentials.
+    Requires authentication.
     """
     try:
         conn_info = ConnectionInfo(
@@ -77,11 +83,16 @@ async def test_connection(request: ConnectionRequest):
 
 
 @router.post("/tables", response_model=TablesResponse)
-async def get_tables(request: ConnectionRequest, schema: str = "dbo"):
+async def get_tables(
+    request: ConnectionRequest,
+    schema: str = "dbo",
+    current_user: User = Depends(get_current_user),
+):
     """
     Get list of tables in a database.
 
     Returns all tables in the specified schema.
+    Requires authentication.
     """
     try:
         conn_info = ConnectionInfo(
@@ -109,11 +120,15 @@ async def get_tables(request: ConnectionRequest, schema: str = "dbo"):
 
 
 @router.post("/databases")
-async def get_databases(request: ConnectionRequest):
+async def get_databases(
+    request: ConnectionRequest,
+    current_user: User = Depends(get_current_user),
+):
     """
     Get list of databases on the server.
 
     Returns all accessible databases on the SQL Server instance.
+    Requires authentication.
     """
     try:
         # Connect to master to list databases

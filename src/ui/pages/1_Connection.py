@@ -87,21 +87,38 @@ def load_cached_settings() -> dict:
 
 
 def save_cached_settings(settings: dict) -> None:
-    """Save connection settings to cache file."""
+    """
+    Save connection settings to cache file.
+
+    SECURITY NOTE: Passwords are NOT stored in the cache file.
+    Only server, database, and username are persisted.
+    Passwords must be provided via environment variables or entered each session.
+    """
     try:
         os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
+        # SECURITY: Do NOT store passwords in the cache file
+        safe_settings = {
+            k: v for k, v in settings.items()
+            if not k.endswith("_password")
+        }
         with open(CACHE_FILE, "w") as f:
-            json.dump(settings, f)
+            json.dump(safe_settings, f)
     except Exception:
         pass
 
 
-def restore_connection_from_cache(prefix: str, cached: dict) -> None:
-    """Restore ConnectionInfo object from cached settings."""
+def restore_connection_from_cache(prefix: str, cached: dict, env_defaults: dict) -> None:
+    """
+    Restore ConnectionInfo object from cached settings.
+
+    SECURITY NOTE: Passwords are loaded from environment variables only,
+    NOT from the cache file.
+    """
     server = cached.get(f"{prefix}_server")
     database = cached.get(f"{prefix}_database")
     username = cached.get(f"{prefix}_username")
-    password = cached.get(f"{prefix}_password")
+    # SECURITY: Get password from environment, not cache
+    password = env_defaults.get(f"{prefix}_password", "")
 
     if server and database and username and password:
         try:
@@ -132,17 +149,19 @@ def render() -> None:
         env_defaults = get_env_defaults()
 
         # Apply environment defaults first, then override with cached values
+        # SECURITY: Passwords only come from environment, never from cache
         for key, value in env_defaults.items():
             if key not in st.session_state and value:
                 st.session_state[key] = value
 
         if cached:
+            # Only restore non-password fields from cache
             for key, value in cached.items():
-                if key not in st.session_state:
+                if key not in st.session_state and not key.endswith("_password"):
                     st.session_state[key] = value
-            # Auto-restore ConnectionInfo objects
-            restore_connection_from_cache("source", cached)
-            restore_connection_from_cache("target", cached)
+            # Auto-restore ConnectionInfo objects (passwords come from env)
+            restore_connection_from_cache("source", cached, env_defaults)
+            restore_connection_from_cache("target", cached, env_defaults)
 
         st.session_state.cache_loaded = True
 
@@ -280,14 +299,13 @@ def test_connections() -> None:
 
     if success:
         # Save settings to cache for persistence across refreshes
+        # SECURITY: Passwords are NOT saved to cache - save_cached_settings filters them out
         cache_data = {
             "source_server": st.session_state.get("source_server"),
             "source_username": st.session_state.get("source_username"),
-            "source_password": st.session_state.get("source_password"),
             "source_database": st.session_state.get("source_database"),
             "target_server": st.session_state.get("target_server"),
             "target_username": st.session_state.get("target_username"),
-            "target_password": st.session_state.get("target_password"),
             "target_database": st.session_state.get("target_database"),
         }
         save_cached_settings(cache_data)

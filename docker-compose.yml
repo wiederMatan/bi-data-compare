@@ -1,3 +1,7 @@
+# SECURITY: Set SA_PASSWORD environment variable before running docker compose
+# Example: export SA_PASSWORD='YourSecureP@ssw0rd!' && docker compose up
+# The SA_PASSWORD is REQUIRED and must meet SQL Server password complexity requirements
+
 services:
   qa:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -5,13 +9,14 @@ services:
     hostname: qa
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${SA_PASSWORD:-YourStrong@Passw0rd}
+      # SECURITY: SA_PASSWORD MUST be set via environment variable - no default value
+      - MSSQL_SA_PASSWORD=${SA_PASSWORD:?SA_PASSWORD environment variable is required}
     ports:
       - "1433:1433"
     volumes:
       - sqlserver-qa-data:/var/opt/mssql
     healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD:-YourStrong@Passw0rd}" -C -Q "SELECT 1" || exit 1
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
       interval: 10s
       timeout: 3s
       retries: 10
@@ -23,13 +28,14 @@ services:
     hostname: dev
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${SA_PASSWORD:-YourStrong@Passw0rd}
+      # SECURITY: SA_PASSWORD MUST be set via environment variable - no default value
+      - MSSQL_SA_PASSWORD=${SA_PASSWORD:?SA_PASSWORD environment variable is required}
     ports:
       - "1434:1433"
     volumes:
       - sqlserver-dev-data:/var/opt/mssql
     healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD:-YourStrong@Passw0rd}" -C -Q "SELECT 1" || exit 1
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
       interval: 10s
       timeout: 3s
       retries: 10

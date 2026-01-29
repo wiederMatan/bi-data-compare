@@ -3,12 +3,14 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from src.api.routes.auth import get_current_user
 from src.core.logging import get_logger
 from src.data.database import get_cached_connection
 from src.data.models import AuthType, ComparisonMode, ConnectionInfo
+from src.services.auth import User
 from src.services.comparison import ComparisonService
 from src.services.persistence import get_persistence_service
 
@@ -187,12 +189,16 @@ def _run_comparison_background(
 
 
 @router.post("/run", response_model=ComparisonResponse)
-async def run_comparison(request: ComparisonRequest):
+async def run_comparison(
+    request: ComparisonRequest,
+    current_user: User = Depends(get_current_user),
+):
     """
     Run synchronous comparison.
 
     Compares specified tables between source and target databases.
     Returns when all comparisons are complete.
+    Requires authentication.
     """
     try:
         run_id = str(uuid.uuid4())[:8]
@@ -300,12 +306,14 @@ async def run_comparison(request: ComparisonRequest):
 async def run_comparison_async(
     request: ComparisonRequest,
     background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
 ):
     """
     Start asynchronous comparison.
 
     Starts comparison in background and returns immediately with run ID.
     Use /status/{run_id} to check progress.
+    Requires authentication.
     """
     run_id = str(uuid.uuid4())[:8]
 
@@ -329,11 +337,15 @@ async def run_comparison_async(
 
 
 @router.get("/status/{run_id}")
-async def get_comparison_status(run_id: str):
+async def get_comparison_status(
+    run_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Get status of async comparison.
 
     Returns current progress and results for background comparison.
+    Requires authentication.
     """
     if run_id in _async_jobs:
         job = _async_jobs[run_id]
@@ -366,11 +378,15 @@ async def get_comparison_status(run_id: str):
 
 
 @router.get("/results/{run_id}")
-async def get_comparison_results(run_id: str):
+async def get_comparison_results(
+    run_id: str,
+    current_user: User = Depends(get_current_user),
+):
     """
     Get results of completed comparison.
 
     Returns detailed results from persistence storage.
+    Requires authentication.
     """
     persistence = get_persistence_service()
     run = persistence.get_run(run_id)

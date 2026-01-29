@@ -1,6 +1,8 @@
 """Export service for comparison results."""
 
+import html
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -13,6 +15,59 @@ from src.core.logging import get_logger
 from src.data.models import ComparisonResult, CompressionRecommendation
 
 logger = get_logger(__name__)
+
+
+def _escape_html(text: Any) -> str:
+    """
+    Escape HTML special characters to prevent XSS attacks.
+
+    Args:
+        text: Text to escape
+
+    Returns:
+        HTML-escaped string
+    """
+    if text is None:
+        return ""
+    return html.escape(str(text))
+
+
+def _validate_output_path(output_path: str, allowed_extensions: Optional[list[str]] = None) -> str:
+    """
+    Validate output path to prevent path traversal attacks.
+
+    Args:
+        output_path: The output path to validate
+        allowed_extensions: Optional list of allowed file extensions
+
+    Returns:
+        The validated absolute path
+
+    Raises:
+        ExportError: If the path is invalid or potentially dangerous
+    """
+    # Convert to absolute path and resolve any .. or . components
+    abs_path = os.path.abspath(output_path)
+
+    # Check for path traversal attempts in the original path
+    if ".." in output_path:
+        raise ExportError(
+            "Path traversal detected in output path",
+            export_format="unknown",
+            file_path=output_path,
+        )
+
+    # Check file extension if specified
+    if allowed_extensions:
+        _, ext = os.path.splitext(abs_path)
+        if ext.lower() not in allowed_extensions:
+            raise ExportError(
+                f"Invalid file extension. Allowed: {allowed_extensions}",
+                export_format="unknown",
+                file_path=output_path,
+            )
+
+    return abs_path
 
 
 class ExportService:
@@ -38,6 +93,8 @@ class ExportService:
             ExportError: If export fails
         """
         try:
+            # Validate output path
+            output_path = _validate_output_path(output_path, [".xlsx", ".xls"])
             logger.info(f"Exporting comparison results to Excel: {output_path}")
 
             with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
@@ -137,8 +194,15 @@ class ExportService:
             ExportError: If export fails
         """
         try:
+            # Validate output directory path
+            if ".." in output_dir:
+                raise ExportError(
+                    "Path traversal detected in output path",
+                    export_format="csv",
+                    file_path=output_dir,
+                )
             logger.info(f"Exporting comparison results to CSV: {output_dir}")
-            output_path = Path(output_dir)
+            output_path = Path(os.path.abspath(output_dir))
             output_path.mkdir(parents=True, exist_ok=True)
 
             created_files = []
@@ -214,6 +278,8 @@ class ExportService:
             ExportError: If export fails
         """
         try:
+            # Validate output path
+            output_path = _validate_output_path(output_path, [".json"])
             logger.info(f"Exporting comparison results to JSON: {output_path}")
 
             data = {
@@ -350,6 +416,8 @@ class ExportService:
             ExportError: If export fails
         """
         try:
+            # Validate output path
+            output_path = _validate_output_path(output_path, [".html", ".htm"])
             logger.info(f"Generating HTML report: {output_path}")
 
             html = self._build_html_report(results)
@@ -448,14 +516,19 @@ class ExportService:
                 if result.status == "failed"
                 else "badge-warning"
             )
+            # SECURITY: Escape all user-provided data to prevent XSS
+            escaped_table = _escape_html(result.source_table)
+            escaped_status = _escape_html(result.status)
+            escaped_summary = _escape_html(result.get_summary())
+
             html += f"""
                 <tr>
-                    <td>{result.source_table}</td>
-                    <td><span class="badge {status_class}">{result.status}</span></td>
+                    <td>{escaped_table}</td>
+                    <td><span class="badge {status_class}">{escaped_status}</span></td>
                     <td>{result.source_row_count:,}</td>
                     <td>{result.target_row_count:,}</td>
                     <td>{result.get_match_percentage():.1f}%</td>
-                    <td>{result.get_summary()}</td>
+                    <td>{escaped_summary}</td>
                 </tr>
             """
 
@@ -487,6 +560,8 @@ class ExportService:
             ExportError: If export fails
         """
         try:
+            # Validate output path
+            output_path = _validate_output_path(output_path, [".pdf"])
             logger.info(f"Exporting comparison results to PDF: {output_path}")
 
             # Create PDF object

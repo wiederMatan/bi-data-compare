@@ -1,5 +1,7 @@
 """Database adapters for multi-database support."""
 
+import os
+import re
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Optional
@@ -14,6 +16,51 @@ from src.data.models import AuthType, ConnectionInfo
 from src.utils.odbc_driver import get_odbc_driver_string
 
 logger = get_logger(__name__)
+
+
+def _validate_adapter_identifier(identifier: str, identifier_type: str = "identifier") -> str:
+    """
+    Validate SQL identifier for use in queries.
+
+    Args:
+        identifier: The identifier to validate
+        identifier_type: Type of identifier for error messages
+
+    Returns:
+        The validated identifier
+
+    Raises:
+        ValueError: If identifier is invalid
+    """
+    if not identifier:
+        raise ValueError(f"{identifier_type} cannot be empty")
+
+    if len(identifier) > 128:
+        raise ValueError(f"{identifier_type} cannot exceed 128 characters")
+
+    # SQL identifier pattern: alphanumeric, underscore, @, #, $
+    pattern = r"^[a-zA-Z_@#][a-zA-Z0-9_@#$]*$"
+    if not re.match(pattern, identifier):
+        raise ValueError(f"Invalid {identifier_type}: contains invalid characters")
+
+    return identifier
+
+
+def _truncate_query_for_log(query: str, max_length: int = 100) -> str:
+    """
+    Truncate query for safe logging to avoid exposing sensitive data.
+
+    Args:
+        query: The query to truncate
+        max_length: Maximum length of the truncated query
+
+    Returns:
+        Truncated query string
+    """
+    sanitized = query.strip()
+    if len(sanitized) > max_length:
+        return sanitized[:max_length] + "... [truncated]"
+    return sanitized
 
 
 class DatabaseType(str, Enum):
@@ -106,8 +153,12 @@ class DatabaseAdapter(ABC):
                 return []
 
         except Exception as e:
+            # SECURITY: Truncate query in logs to avoid exposing sensitive data
             logger.error(f"Query failed: {str(e)}")
-            raise DatabaseError(f"Query failed: {str(e)}", query=query) from e
+            raise DatabaseError(
+                f"Query failed: {str(e)}",
+                query=_truncate_query_for_log(query),
+            ) from e
 
 
 class SQLServerAdapter(DatabaseAdapter):
@@ -117,13 +168,18 @@ class SQLServerAdapter(DatabaseAdapter):
         """Build SQL Server connection string."""
         driver = get_odbc_driver_string()
 
+        # SECURITY: TrustServerCertificate should be 'no' in production
+        # Set DB_TRUST_SERVER_CERTIFICATE=no for production environments
+        trust_cert = os.environ.get("DB_TRUST_SERVER_CERTIFICATE", "yes").lower()
+        trust_cert_value = "yes" if trust_cert in ("yes", "true", "1") else "no"
+
         if self.connection_info.auth_type == AuthType.WINDOWS:
             conn_str = (
                 f"DRIVER={driver};"
                 f"SERVER={self.connection_info.server};"
                 f"DATABASE={self.connection_info.database};"
                 "Trusted_Connection=yes;"
-                "TrustServerCertificate=yes"
+                f"TrustServerCertificate={trust_cert_value}"
             )
         else:
             conn_str = (
@@ -132,13 +188,15 @@ class SQLServerAdapter(DatabaseAdapter):
                 f"DATABASE={self.connection_info.database};"
                 f"UID={self.connection_info.username};"
                 f"PWD={self.connection_info.password};"
-                "TrustServerCertificate=yes"
+                f"TrustServerCertificate={trust_cert_value}"
             )
 
         return f"mssql+pyodbc:///?odbc_connect={conn_str}"
 
     def get_tables_query(self, schema: str) -> str:
         """Get SQL Server tables query."""
+        # Validate identifier to prevent SQL injection
+        _validate_adapter_identifier(schema, "schema")
         return f"""
             SELECT TABLE_NAME as table_name
             FROM INFORMATION_SCHEMA.TABLES
@@ -149,6 +207,9 @@ class SQLServerAdapter(DatabaseAdapter):
 
     def get_columns_query(self, schema: str, table: str) -> str:
         """Get SQL Server columns query."""
+        # Validate identifiers to prevent SQL injection
+        _validate_adapter_identifier(schema, "schema")
+        _validate_adapter_identifier(table, "table")
         return f"""
             SELECT
                 COLUMN_NAME as column_name,
@@ -165,6 +226,9 @@ class SQLServerAdapter(DatabaseAdapter):
 
     def get_row_count_query(self, schema: str, table: str) -> str:
         """Get SQL Server row count query."""
+        # Validate identifiers to prevent SQL injection
+        _validate_adapter_identifier(schema, "schema")
+        _validate_adapter_identifier(table, "table")
         return f"SELECT COUNT(*) FROM [{schema}].[{table}]"
 
 
@@ -182,6 +246,8 @@ class PostgreSQLAdapter(DatabaseAdapter):
 
     def get_tables_query(self, schema: str) -> str:
         """Get PostgreSQL tables query."""
+        # Validate identifier to prevent SQL injection
+        _validate_adapter_identifier(schema, "schema")
         return f"""
             SELECT table_name
             FROM information_schema.tables
@@ -192,6 +258,9 @@ class PostgreSQLAdapter(DatabaseAdapter):
 
     def get_columns_query(self, schema: str, table: str) -> str:
         """Get PostgreSQL columns query."""
+        # Validate identifiers to prevent SQL injection
+        _validate_adapter_identifier(schema, "schema")
+        _validate_adapter_identifier(table, "table")
         return f"""
             SELECT
                 column_name,
@@ -208,6 +277,9 @@ class PostgreSQLAdapter(DatabaseAdapter):
 
     def get_row_count_query(self, schema: str, table: str) -> str:
         """Get PostgreSQL row count query."""
+        # Validate identifiers to prevent SQL injection
+        _validate_adapter_identifier(schema, "schema")
+        _validate_adapter_identifier(table, "table")
         return f'SELECT COUNT(*) FROM "{schema}"."{table}"'
 
 
@@ -225,6 +297,7 @@ class MySQLAdapter(DatabaseAdapter):
 
     def get_tables_query(self, schema: str) -> str:
         """Get MySQL tables query."""
+        # Note: MySQL uses database name instead of schema
         return f"""
             SELECT table_name
             FROM information_schema.tables
@@ -235,6 +308,8 @@ class MySQLAdapter(DatabaseAdapter):
 
     def get_columns_query(self, schema: str, table: str) -> str:
         """Get MySQL columns query."""
+        # Validate table identifier to prevent SQL injection
+        _validate_adapter_identifier(table, "table")
         return f"""
             SELECT
                 column_name,
@@ -251,6 +326,8 @@ class MySQLAdapter(DatabaseAdapter):
 
     def get_row_count_query(self, schema: str, table: str) -> str:
         """Get MySQL row count query."""
+        # Validate table identifier to prevent SQL injection
+        _validate_adapter_identifier(table, "table")
         return f"SELECT COUNT(*) FROM `{table}`"
 
 

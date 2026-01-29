@@ -232,6 +232,9 @@ def render() -> None:
                             # Get max dates from both databases to show preview
                             target_conn = get_cached_connection(target_conn_info)
 
+                            # Validate date column identifier (schema_name and fact_table already validated above)
+                            validate_sql_identifier(selected_date_col, "date_column")
+
                             source_max_q = f"SELECT MAX([{selected_date_col}]) as max_val FROM [{schema_name}].[{fact_table}]"
                             target_max_q = f"SELECT MAX([{selected_date_col}]) as max_val FROM [{schema_name}].[{fact_table}]"
 
@@ -353,7 +356,13 @@ def check_column_differences(source_conn_info, target_conn_info, schema_name: st
                                 # Show 10 sample rows for source-only columns
                                 st.markdown("**Sample data (10 rows):**")
                                 try:
+                                    # Validate identifiers to prevent SQL injection
+                                    validate_sql_identifier(schema_name, "schema_name")
+                                    validate_sql_identifier(table_name, "table_name")
                                     cols_list = list(source_only)[:5]  # Limit columns shown
+                                    # Validate each column name
+                                    for col_name in cols_list:
+                                        validate_sql_identifier(col_name, "column_name")
                                     query = f"SELECT TOP 10 [{'], ['.join(cols_list)}] FROM [{schema_name}].[{table_name}]"
                                     result = source_conn.execute_query(query)
                                     if result:
@@ -374,7 +383,13 @@ def check_column_differences(source_conn_info, target_conn_info, schema_name: st
                                 # Show 10 sample rows for target-only columns
                                 st.markdown("**Sample data (10 rows):**")
                                 try:
+                                    # Validate identifiers to prevent SQL injection
+                                    validate_sql_identifier(schema_name, "schema_name")
+                                    validate_sql_identifier(table_name, "table_name")
                                     cols_list = list(target_only)[:5]  # Limit columns shown
+                                    # Validate each column name
+                                    for col_name in cols_list:
+                                        validate_sql_identifier(col_name, "column_name")
                                     query = f"SELECT TOP 10 [{'], ['.join(cols_list)}] FROM [{schema_name}].[{table_name}]"
                                     result = target_conn.execute_query(query)
                                     if result:
@@ -565,6 +580,11 @@ def run_comparison(
                 table = inc_config["table"]
                 schema = inc_config["schema"]
                 date_col = inc_config["date_column"]
+
+                # Validate identifiers to prevent SQL injection
+                validate_sql_identifier(schema, "schema")
+                validate_sql_identifier(table, "table")
+                validate_sql_identifier(date_col, "date_column")
 
                 # Get max from source
                 source_max_query = f"SELECT MAX([{date_col}]) as max_val FROM [{schema}].[{table}]"

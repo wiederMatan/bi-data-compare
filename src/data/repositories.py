@@ -1,5 +1,6 @@
 """Repository classes for data access."""
 
+import re
 from typing import Any, Generator, Optional
 
 import pandas as pd
@@ -14,6 +15,52 @@ from src.data.models import (
     IndexInfo,
     TableInfo,
 )
+
+
+def _validate_sql_identifier(identifier: str, identifier_type: str = "identifier") -> str:
+    """
+    Validate and sanitize a SQL identifier to prevent SQL injection.
+
+    Args:
+        identifier: The identifier to validate (table name, schema name, column name)
+        identifier_type: Type of identifier for error messages
+
+    Returns:
+        The validated identifier
+
+    Raises:
+        ValueError: If the identifier contains invalid characters
+    """
+    if not identifier:
+        raise ValueError(f"{identifier_type} cannot be empty")
+
+    # SQL Server identifier rules: alphanumeric, underscore, @, #, $
+    # Must start with letter, underscore, @, or #
+    # Max length 128 characters
+    if len(identifier) > 128:
+        raise ValueError(f"{identifier_type} cannot exceed 128 characters")
+
+    # Check for valid SQL Server identifier pattern
+    pattern = r"^[a-zA-Z_@#][a-zA-Z0-9_@#$]*$"
+    if not re.match(pattern, identifier):
+        raise ValueError(
+            f"Invalid {identifier_type}: contains invalid characters. "
+            f"Only alphanumeric characters, underscores, @, #, and $ are allowed."
+        )
+
+    # Additional check for dangerous keywords (defense in depth)
+    dangerous_keywords = [
+        "DROP", "DELETE", "INSERT", "UPDATE", "EXEC", "EXECUTE",
+        "UNION", "SELECT", "--", "/*", "*/", "xp_", "sp_", ";"
+    ]
+    identifier_upper = identifier.upper()
+    for keyword in dangerous_keywords:
+        if keyword in identifier_upper:
+            raise ValueError(
+                f"Invalid {identifier_type}: contains potentially dangerous keyword"
+            )
+
+    return identifier
 
 logger = get_logger(__name__)
 
@@ -342,6 +389,10 @@ class TableDataRepository:
         Returns:
             Number of rows
         """
+        # Validate identifiers to prevent SQL injection
+        _validate_sql_identifier(schema_name, "schema_name")
+        _validate_sql_identifier(table_name, "table_name")
+
         query = f"SELECT COUNT(*) FROM [{schema_name}].[{table_name}]"
         try:
             return int(self.connection.execute_scalar(query) or 0)
@@ -373,6 +424,13 @@ class TableDataRepository:
         Yields:
             DataFrame chunks
         """
+        # Validate identifiers to prevent SQL injection
+        _validate_sql_identifier(schema_name, "schema_name")
+        _validate_sql_identifier(table_name, "table_name")
+        if order_by:
+            for col in order_by:
+                _validate_sql_identifier(col, "column_name")
+
         query = f"SELECT * FROM [{schema_name}].[{table_name}]"
 
         if order_by:
@@ -411,13 +469,23 @@ class TableDataRepository:
             schema_name: Schema name
             table_name: Table name
             columns: Optional list of columns to select
-            where: Optional WHERE clause
+            where: Optional WHERE clause (SECURITY NOTE: must be pre-validated by caller)
             order_by: Optional list of columns to order by
             limit: Optional row limit
 
         Returns:
             DataFrame with table data
         """
+        # Validate identifiers to prevent SQL injection
+        _validate_sql_identifier(schema_name, "schema_name")
+        _validate_sql_identifier(table_name, "table_name")
+        if columns:
+            for col in columns:
+                _validate_sql_identifier(col, "column_name")
+        if order_by:
+            for col in order_by:
+                _validate_sql_identifier(col, "column_name")
+
         # Build query
         col_clause = (
             ", ".join([f"[{col}]" for col in columns])
@@ -426,6 +494,8 @@ class TableDataRepository:
         )
         query = f"SELECT {col_clause} FROM [{schema_name}].[{table_name}]"
 
+        # SECURITY NOTE: The 'where' clause should be pre-validated by the caller
+        # Only use parameterized queries or validated inputs for WHERE clauses
         if where:
             query += f" WHERE {where}"
 
@@ -468,6 +538,12 @@ class TableDataRepository:
         Returns:
             Checksum value
         """
+        # Validate identifiers to prevent SQL injection
+        _validate_sql_identifier(schema_name, "schema_name")
+        _validate_sql_identifier(table_name, "table_name")
+        for col in columns:
+            _validate_sql_identifier(col, "column_name")
+
         col_clause = ", ".join([f"[{col}]" for col in columns])
         query = f"""
             SELECT CHECKSUM_AGG(BINARY_CHECKSUM({col_clause}))
@@ -619,6 +695,10 @@ class CompressionRepository:
         Raises:
             DatabaseError: If compression application fails
         """
+        # Validate identifiers to prevent SQL injection
+        _validate_sql_identifier(schema_name, "schema_name")
+        _validate_sql_identifier(table_name, "table_name")
+
         try:
             compression_value = compression_type.value
 

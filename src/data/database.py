@@ -1,5 +1,6 @@
 """Database connection and management."""
 
+import os
 import threading
 from contextlib import contextmanager
 from typing import Any, Generator, Optional
@@ -15,6 +16,24 @@ from src.data.models import ConnectionInfo, AuthType
 from src.utils.odbc_driver import get_odbc_driver_string
 
 logger = get_logger(__name__)
+
+
+def _truncate_query_for_log(query: str, max_length: int = 100) -> str:
+    """
+    Truncate query for safe logging to avoid exposing sensitive data.
+
+    Args:
+        query: The query to truncate
+        max_length: Maximum length of the truncated query
+
+    Returns:
+        Truncated query string
+    """
+    # Remove any potential sensitive data markers
+    sanitized = query.strip()
+    if len(sanitized) > max_length:
+        return sanitized[:max_length] + "... [truncated]"
+    return sanitized
 
 # Global connection cache with thread safety
 _connection_cache: dict[str, "DatabaseConnection"] = {}
@@ -220,10 +239,12 @@ class DatabaseConnection:
                 return []
 
         except Exception as e:
-            logger.error(f"Query execution failed: {str(e)}\nQuery: {query}")
+            # SECURITY: Truncate query in logs to avoid exposing sensitive data
+            logger.error(f"Query execution failed: {str(e)}\nQuery: {_truncate_query_for_log(query)}")
             raise DatabaseError(
                 f"Query execution failed: {str(e)}",
-                query=query,
+                # SECURITY: Do not include full query in exception as it may be logged elsewhere
+                query=_truncate_query_for_log(query),
             ) from e
 
     def execute_scalar(
@@ -253,10 +274,12 @@ class DatabaseConnection:
                 return row[0] if row else None
 
         except Exception as e:
-            logger.error(f"Scalar query execution failed: {str(e)}\nQuery: {query}")
+            # SECURITY: Truncate query in logs to avoid exposing sensitive data
+            logger.error(f"Scalar query execution failed: {str(e)}\nQuery: {_truncate_query_for_log(query)}")
             raise DatabaseError(
                 f"Scalar query execution failed: {str(e)}",
-                query=query,
+                # SECURITY: Do not include full query in exception as it may be logged elsewhere
+                query=_truncate_query_for_log(query),
             ) from e
 
     def test_connection(self) -> bool:
@@ -306,8 +329,20 @@ class DatabaseConnection:
             f"DRIVER={driver}",
             f"SERVER={self.connection_info.server}",
             f"DATABASE={self.connection_info.database}",
-            "TrustServerCertificate=yes",
         ]
+
+        # SECURITY: TrustServerCertificate should be 'no' in production
+        # Set DB_TRUST_SERVER_CERTIFICATE=no for production environments
+        trust_cert = os.environ.get("DB_TRUST_SERVER_CERTIFICATE", "yes").lower()
+        if trust_cert in ("yes", "true", "1"):
+            parts.append("TrustServerCertificate=yes")
+            if not os.environ.get("DB_TRUST_SERVER_CERTIFICATE"):
+                logger.warning(
+                    "DB_TRUST_SERVER_CERTIFICATE not set, defaulting to 'yes'. "
+                    "Set to 'no' in production for proper certificate validation."
+                )
+        else:
+            parts.append("TrustServerCertificate=no")
 
         if self.connection_info.auth_type == AuthType.WINDOWS:
             parts.append("Trusted_Connection=yes")
